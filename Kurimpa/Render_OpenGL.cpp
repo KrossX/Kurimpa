@@ -36,9 +36,14 @@ WNDPROC g_oldproc;
 LONG g_style;
 float g_width, g_height;
 
+bool linearfilter = true;
 bool usevsync = false;
 bool fullscreen = false;
 bool show_vram = false;
+
+const GLuint TEX_INTFORMAT = GL_RGB5_A1;
+const GLuint TEX_FORMAT    = GL_RGBA;
+const GLuint TEX_TYPE      = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 
 #pragma pack(push)
 #pragma pack(1)
@@ -218,6 +223,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		switch(wParam)
 		{
+		case VK_MULTIPLY:
+			linearfilter = !linearfilter;
+			glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
+			break;
+
 		case VK_F9:
 			usevsync = !usevsync;
 			wglSwapIntervalEXT(usevsync ? 1 : 0);
@@ -436,12 +447,15 @@ static inline void GetTexture(GLuint &tex)
 	if(tex) glDeleteTextures(1, &tex);
 
 	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
+	glBindTexture(GL_TEXTURE_RECTANGLE, tex);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R16UI, 1024, 512, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, psxmem);
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, TEX_INTFORMAT, 1024, 512, 0, TEX_FORMAT, TEX_TYPE, 0);
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BORDER_COLOR, color);
@@ -459,12 +473,6 @@ static inline void GetTexture(GLuint &tex)
 	
 	glActiveTexture(GL_TEXTURE0);
 }
-
-static inline void UpdateTexture(GLuint &tex)
-{
-	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0,1024, 512, GL_RED_INTEGER, GL_UNSIGNED_SHORT, psxmem);
-}
-
 
 void  RenderOGL::PrepareQuad()
 {
@@ -547,6 +555,7 @@ bool RenderOGL::Init(HWND hWin)
 		Prog[i].u_DisplayOffset = glGetUniformLocation(Prog[i].ProgramID,"DisplayOffset");
 
 		glUniform1i(Prog[i].SamplerID, 0);
+		glBindSampler(0, Prog[i].SamplerID);
 	}
 
 	return true;
@@ -561,8 +570,7 @@ void RenderOGL::Present(bool is24bpp, bool disabled)
 		return;
 	}
 
-	//glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, origin_y, 1024, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, psxmem);
-	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, GL_RED_INTEGER, GL_UNSIGNED_SHORT, psxmem);
+	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, TEX_FORMAT, TEX_TYPE, psxmem);
 	
 	if(show_vram)
 	{
