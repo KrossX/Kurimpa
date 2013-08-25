@@ -291,6 +291,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 
+	case WM_CLOSE: // Haxz: Clicking X and Emu not stopping...
+		g_oldproc(hWnd, WM_KEYDOWN, VK_ESCAPE, 0);
+		return TRUE;
+
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
