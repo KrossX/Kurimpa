@@ -218,10 +218,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		switch(wParam)
 		{
-		case VK_SNAPSHOT:
-			TakeScreenshot();
-			break;
-
 		case VK_F9:
 			usevsync = !usevsync;
 			wglSwapIntervalEXT(usevsync ? 1 : 0);
@@ -266,6 +262,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
+		switch(wParam)
+		{
+		case VK_SNAPSHOT:
+			TakeScreenshot();
+			break;
+		}
+
 		kbuff[wParam] = false;
 		break;
 
