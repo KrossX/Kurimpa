@@ -30,9 +30,8 @@ uint GetTexel24(vec2 pos)
 	return value;
 }
 
-uvec3 GetPixel24(vec2 pos)
+vec3 GetPixel24(vec2 pos)
 {
-	uvec3 ucolor;
 	uint value, color0, color1, color2;
 	
 	uint curpix = int(pos.x)%2;
@@ -64,9 +63,10 @@ uvec3 GetPixel24(vec2 pos)
 		color0 = (value >> 8) & 0xFF;
 	}
 	
-	ucolor.r = color0;
-	ucolor.g = color1;
-	ucolor.b = color2;
+	vec3 ucolor;
+	ucolor.r = float(color0);
+	ucolor.g = float(color1);
+	ucolor.b = float(color2);
 	
 	return ucolor;
 }
@@ -76,7 +76,7 @@ vec3 BilinearFilter24(vec2 pos)
 	vec3 color0, colorx, colory, colorxy;
 	
 	vec2 diff = vec2(fract(pos.x), fract(pos.y));
-	ivec3 offset = ivec3(1, 1, 0);
+	vec3 offset = vec3(1.0, 1.0, 0.0);
 	
 	pos = floor(pos);
 	ivec2 ipos = ivec2(pos);
