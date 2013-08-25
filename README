@@ -1,0 +1,59 @@
+Kurimpa - Video plugin for emulators
+===============================================================================
+
+Main repo: https://github.com/KrossX/Kurimpa
+Wiki: https://github.com/KrossX/Kurimpa/wiki
+Download: http://tiny.cc/magicaltools
+
+
+Description and information
+-------------------------------------------------------------------------------
+
+Currently, a software plugin for PSX emulators. Requires OGL3 support.
+It's just the base for a hardware plugin for the same platform.
+
+No settings, and no INI either.
+
+Distributed with DLL and GLSL shaders. The GLSL shaders must be placed
+alongside the emulator executable (not in the plugins folder).
+
+Keys:
+ALT+ENTER, fullscreen toggle
+F9, vsync toggle
+F11, show vram
+PRINT SCREEN, window screenshot + vram..shot
+
+
+Thanks / Contact
+-------------------------------------------------------------------------------
+
+Mostly based on 
+http://psx.rules.org/psxrul2.shtml
+http://nocash.emubase.de/psx-spx.htm
+
+Nocash docs are awesome and his apps even more, so go check his stuff!
+http://nocash.emubase.de/
+
+Interface, dmachain and misc based on PEOPS.
+
+
+= Contact =
+KrossX, krossx@live.com
+
+
+License / Disclaimer
+-------------------------------------------------------------------------------
+
+Copyright (C) 2013  KrossX
+
+This program is free software: you can redistribute it and/or modify it under 
+the terms of the GNU General Public License as published by the Free Software 
+Foundation, either version 3 of the License, or (at your option) any later 
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT 
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
