@@ -101,6 +101,8 @@ struct DISPINFO
 	u16 X1, X2, Y1, Y2;
 	u8 scanlines; // 224 NTSC, 264 PAL
 
+	bool changed;
+
 	void SetMode(u32 REG)
 	{
 		u8 hres2 = ((REG & GPUSTAT_HRES1) >> 17) &3;
@@ -124,28 +126,17 @@ struct DISPINFO
 
 		height = ((REG & GPUSTAT_VRES) && isInterlaced) ? 480 : 240;
 		scanlines = isPAL ? 264 : 224;
+
+		changed = true;
 	}
 
-	void SetSTART(u32 data)
+	void UpdateCentering()
 	{
-		ox = data & 0x3FF;
-		oy = (data >> 10) & 0x1FF;
-	}
-
-	void SetHRANGE(u32 data)
-	{
-		X1 = data & 0xFFF;
-		X2 = (data >> 12) & 0xFFF;
+		if(!changed) return;
 
 		rangeh = (X2 - X1) / cycles;
 		//cx = (X1 - 0x260) / cycles;
 		cx = (width - rangeh) / 2;
-	}
-
-	void SetVRANGE(u32 data)
-	{
-		Y1 = data & 0x3FF;
-		Y2 = (data >> 10) & 0x3FF;
 
 		/*
 		if(isPAL)
@@ -159,8 +150,32 @@ struct DISPINFO
 
 		cy     *= height == 480 ? 2 : 1;
 		rangev *= height == 480 ? 2 : 1;
+
+		changed = false;
 	}
 
+	void SetSTART(u32 data)
+	{
+		ox = data & 0x3FF;
+		oy = (data >> 10) & 0x1FF;
+	}
+
+	void SetHRANGE(u32 data)
+	{
+		X1 = data & 0xFFF;
+		X2 = (data >> 12) & 0xFFF;
+
+		changed = true;
+	}
+
+	void SetVRANGE(u32 data)
+	{
+		Y1 = data & 0x3FF;
+		Y2 = (data >> 10) & 0x3FF;
+
+		changed = true;
+	}
+	
 };
 
 struct PSXgpu

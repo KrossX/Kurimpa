@@ -215,6 +215,8 @@ void PSXgpu::LaceUpdate()
 
 	framecount++;
 
+	DI.UpdateCentering();
+
 	// This entire mess is for screen position
 	render->origin_x = DI.ox;
 	render->origin_y = DI.oy;
