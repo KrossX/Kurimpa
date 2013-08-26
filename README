@@ -19,9 +19,14 @@ alongside the emulator executable (not in the plugins folder).
 
 Keys:
 ALT+ENTER, fullscreen toggle
+MULT, toggle filtering (not for 24bpp mode)
 F9, vsync toggle
 F11, show vram
 PRINT SCREEN, window screenshot + vram..shot
+
+
+If you get a DLL error, you probably need install the runtimes:
+http://www.microsoft.com/en-us/download/details.aspx?id=30679
 
 
 Thanks / Contact
