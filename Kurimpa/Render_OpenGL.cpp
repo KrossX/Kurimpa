@@ -188,9 +188,7 @@ bool CreateContext(HWND hWnd)
 	int attributes[] = {
 	WGL_CONTEXT_MAJOR_VERSION_ARB, 3, // Set the MAJOR version of OpenGL to 3
 	WGL_CONTEXT_MINOR_VERSION_ARB, 3, // Set the MINOR version of OpenGL to 3
-	WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-	0  
-	};
+	WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, 0 };
 
 	if (wglewIsSupported("WGL_ARB_create_context") == 1) // If the OpenGL 3.x context creation extension is available  
 	{ 
@@ -559,7 +557,7 @@ bool RenderOGL::Init(HWND hWin)
 		Prog[i].u_DisplayOffset = glGetUniformLocation(Prog[i].ProgramID,"DisplayOffset");
 
 		glUniform1i(Prog[i].SamplerID, 0);
-		glBindSampler(0, Prog[i].SamplerID);
+		//glBindSampler(0, Prog[i].SamplerID);
 	}
 
 	return true;
