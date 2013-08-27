@@ -358,30 +358,6 @@ u32 OGLProgram::GetUniformLocation(const char *name)
 	return glGetUniformLocation(ID, name);
 }
 
-
-OGLProgram Backend_OpenGL::LoadShaders(const char *vpath, const char *fpath, const char* defs)
-{
-	OGLProgram program;
-	OGLShader fragment, vertex;
-
-	vertex.Create(GL_VERTEX_SHADER);
-	vertex.CompileFromFile(vpath, defs);
-
-	fragment.Create(GL_FRAGMENT_SHADER);
-	fragment.CompileFromFile(fpath, defs);
-
-	program.Create();
-	program.AttachShader(vertex);
-	program.AttachShader(fragment);
-	program.Link();
-
-	vertex.Delete();
-	fragment.Delete();
-
-	
-	return program;
-}
-
 //---------------------------------------------------------------[SCREENSHOT]
 #include "TGA_Header.h"
 

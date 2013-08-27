@@ -19,6 +19,19 @@
 #define RENDEROGL_PSX_H
 #include "Backend_OpenGL.h"
 
+class psxProgram : public OGLProgram
+{
+	u32 Sampler;
+	u32 WindowSize, DisplaySize;
+	u32 DisplayOffset;
+
+public:
+	bool LoadShaders(const char *vpath, const char *fpath, const char* defs);
+	void SetWindowSize(float width, float height);
+	void SetDisplaySize(int ox, int oy, int width, int height);
+	void SetDisplayOffset(int offx1, int offy1, int offx2, int offy2);
+};
+
 class RenderOGL_PSX : public Backend_OpenGL
 {
 	bool linearfilter;
@@ -34,13 +47,7 @@ class RenderOGL_PSX : public Backend_OpenGL
 		PROG_SIZE
 	};
 
-	struct
-	{
-		OGLProgram Program;
-		u32 SamplerID;
-		u32 u_WindowSize, u_DisplaySize;
-		u32 u_DisplayOffset;
-	} Shader[PROG_SIZE];
+	psxProgram Prog[PROG_SIZE];
 
 	struct
 	{
