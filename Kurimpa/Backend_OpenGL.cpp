@@ -200,7 +200,7 @@ bool Backend_OpenGL::GLfail(const char* msg)
 
 //---------------------------------------------------------------[SHADERS]
 
-char* ReadFileToBuffer(const char *filename, const char *insert)
+char* ReadFileToBuffer(const char *filename)
 {
 	using namespace std;
 
@@ -213,15 +213,11 @@ char* ReadFileToBuffer(const char *filename, const char *insert)
 
 		if(filesize > 0)
 		{
-			int def_len = insert ? def_len = strlen(insert) : 0;
-			int sizebuff = filesize + def_len;
-			
-			buffer = new char[sizebuff + 1];
-			if(insert) memcpy(buffer, insert, def_len);
+			buffer = new char[filesize + 1];
 
 			file.seekg(0, ios::beg);
-			file.read(&buffer[def_len], filesize);
-			buffer[sizebuff] = 0x00;
+			file.read(buffer, filesize);
+			buffer[filesize] = 0x00;
 		}
 
 		file.close();
@@ -230,73 +226,161 @@ char* ReadFileToBuffer(const char *filename, const char *insert)
 	return buffer;
 }
 
-void CheckShaderError(GLuint ShaderID)
+//---------------
+
+bool OGLShader::CheckError()
 {
-	GLint Result = GL_FALSE;
+	GLint Result = GL_TRUE;
 	int InfoLogLength = 0;
 
-	glGetShaderiv(ShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(ShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	glGetShaderiv(ID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(ID, GL_INFO_LOG_LENGTH, &InfoLogLength);
 
 	if(Result == GL_FALSE && InfoLogLength > 0)
 	{
 		char *message = new char[InfoLogLength];
-		glGetShaderInfoLog(ShaderID, InfoLogLength, NULL, message);
-		DebugShader(message, InfoLogLength);
+		glGetShaderInfoLog(ID, InfoLogLength, NULL, message);
+		printf("Shader Error!\n%s", message);
+		//DebugShader(message, InfoLogLength);
 		delete[] message;
 	}
+
+	return true;
 }
 
-void Backend_OpenGL::CheckProgramError(u32 ProgramID)
+bool OGLShader::Create(u32 type)
+{
+	ID = glCreateShader(type);
+	created = ID != 0;
+	return created;
+}
+
+bool OGLShader::CompileFromBuffer(const char *buffer, const char *defines)
+{
+	if(!buffer) return false;
+
+	size_t buffer_len = strlen(buffer);
+	size_t defines_len = defines ? strlen(defines) : 0;
+
+	char *shaderbuff = new char[buffer_len + defines_len];
+	
+	if(defines_len)
+		memcpy(shaderbuff, defines, defines_len);
+
+	memcpy(&shaderbuff[defines_len], buffer, buffer_len);
+
+	const GLchar* glbuff = shaderbuff;
+	glShaderSource(ID, 1, &glbuff, NULL);
+	glCompileShader(ID);
+
+	delete[] shaderbuff;
+	return true;
+}
+
+bool OGLShader::CompileFromFile(const char *path, const char *defines)
+{
+	const char* filebuff = ReadFileToBuffer(path);
+	if(!filebuff) return false;
+	
+	bool result = CompileFromBuffer(filebuff, defines);
+
+	delete[] filebuff;
+	return result;
+}
+
+bool OGLShader::Delete()
+{
+	if(!created) return false;
+	glDeleteShader(ID);
+	ID = NULL;
+	created = false;
+	return true;
+}
+
+//--------------
+
+bool OGLProgram::CheckError()
 {
 	GLint Result = GL_FALSE;
 	int InfoLogLength = 0;
 
-	glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
-	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	glGetProgramiv(ID, GL_LINK_STATUS, &Result);
+	glGetProgramiv(ID, GL_INFO_LOG_LENGTH, &InfoLogLength);
 
 	if(Result == GL_FALSE && InfoLogLength > 0)
 	{
 		char *message = new char[InfoLogLength];
-		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, message);
-		DebugShader(message, InfoLogLength);
+		glGetProgramInfoLog(ID, InfoLogLength, NULL, message);
+		printf("Program Error!\n%s", message);
+		//DebugShader(message, InfoLogLength);
 		delete[] message;
 	}
+
+	return true;
 }
 
-u32 Backend_OpenGL::CompileShader(const char *shader_path, unsigned int type, const char* defines)
+bool OGLProgram::Create()
 {
-	GLuint ShaderID = glCreateShader(type);
-
-	const GLchar *glbuff = ReadFileToBuffer(shader_path, defines);
-	glShaderSource(ShaderID, 1, &glbuff, NULL);
-	glCompileShader(ShaderID);
-	
-	CheckShaderError(ShaderID);
-	
-	if(glbuff) delete[] glbuff;
-	
-	return ShaderID;
+	ID = glCreateProgram();
+	created = ID != 0;
+	return created;
 }
 
-u32 Backend_OpenGL::LoadShaders(const char *vertex_file_path, const char *fragment_file_path, const char* defines)
+bool OGLProgram::AttachShader(OGLShader shader)
 {
-	GLuint VertexShaderID = CompileShader(vertex_file_path, GL_VERTEX_SHADER, defines);
-	GLuint FragmentShaderID = CompileShader(fragment_file_path, GL_FRAGMENT_SHADER, defines);
-
-	GLuint ProgramID = glCreateProgram();
-	glAttachShader(ProgramID, VertexShaderID);
-	glAttachShader(ProgramID, FragmentShaderID);
-	glLinkProgram(ProgramID);
-
-	CheckProgramError(ProgramID);
-
-	glDeleteShader(VertexShaderID);
-	glDeleteShader(FragmentShaderID);
-
-	return ProgramID;
+	glAttachShader(ID, shader.GetID());
+	return true;
 }
 
+bool OGLProgram::Link()
+{
+	glLinkProgram(ID);
+	return true;
+}
+
+bool OGLProgram::Use()
+{
+	glUseProgram(ID);
+	return true;
+}
+
+bool OGLProgram::Delete()
+{
+	if(!created) return false;
+	glDeleteProgram(ID);
+	ID = NULL;
+	created = false;
+	return true;
+}
+
+u32 OGLProgram::GetUniformLocation(const char *name)
+{
+	return glGetUniformLocation(ID, name);
+}
+
+
+OGLProgram Backend_OpenGL::LoadShaders(const char *vpath, const char *fpath, const char* defs)
+{
+	OGLProgram program;
+	OGLShader fragment, vertex;
+
+	vertex.Create(GL_VERTEX_SHADER);
+	vertex.CompileFromFile(vpath, defs);
+
+	fragment.Create(GL_FRAGMENT_SHADER);
+	fragment.CompileFromFile(fpath, defs);
+
+	program.Create();
+	program.AttachShader(vertex);
+	program.AttachShader(fragment);
+	program.Link();
+
+	vertex.Delete();
+	fragment.Delete();
+
+	
+	return program;
+}
 
 //---------------------------------------------------------------[SCREENSHOT]
 #include "TGA_Header.h"

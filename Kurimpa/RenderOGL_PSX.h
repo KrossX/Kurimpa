@@ -36,7 +36,8 @@ class RenderOGL_PSX : public Backend_OpenGL
 
 	struct
 	{
-		u32 ProgramID, SamplerID;
+		OGLProgram Program;
+		u32 SamplerID;
 		u32 u_WindowSize, u_DisplaySize;
 		u32 u_DisplayOffset;
 	} Shader[PROG_SIZE];

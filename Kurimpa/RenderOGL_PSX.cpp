@@ -238,10 +238,16 @@ bool  RenderOGL_PSX::PrepareDisplayQuad()
 	glGenBuffers(1, &gl.background_vb);
 	glBindBuffer(GL_ARRAY_BUFFER, gl.background_vb);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_quad), g_vertex_quad, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &gl.background_uv);
 	glBindBuffer(GL_ARRAY_BUFFER, gl.background_uv);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_quad), g_uv_quad, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
 
 	return !GLfail("PrepareQuad");
 }
@@ -281,12 +287,11 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 
 	for(int i = 0; i < PROG_SIZE; i++)
 	{
-		Shader[i].ProgramID = LoadShaders("shader0_vertex.glsl", "shader0_fragment.glsl", PROG_DEFINE[i]);
-		Shader[i].SamplerID = glGetUniformLocation(Shader[i].ProgramID, "Sampler");
-		
-		Shader[i].u_WindowSize  = glGetUniformLocation(Shader[i].ProgramID,"WindowSize");
-		Shader[i].u_DisplaySize = glGetUniformLocation(Shader[i].ProgramID,"DisplaySize");
-		Shader[i].u_DisplayOffset = glGetUniformLocation(Shader[i].ProgramID,"DisplayOffset");
+		Shader[i].Program = LoadShaders("shader0_vertex.glsl", "shader0_fragment.glsl", PROG_DEFINE[i]);
+		Shader[i].SamplerID       = Shader[i].Program.GetUniformLocation("Sampler");
+		Shader[i].u_WindowSize    = Shader[i].Program.GetUniformLocation("WindowSize");
+		Shader[i].u_DisplaySize   = Shader[i].Program.GetUniformLocation("DisplaySize");
+		Shader[i].u_DisplayOffset = Shader[i].Program.GetUniformLocation("DisplayOffset");
 
 		glUniform1i(Shader[i].SamplerID, 0);
 		//glBindSampler(0, Prog[i].SamplerID);
@@ -305,18 +310,9 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 
 void  RenderOGL_PSX::DrawBackground()
 {
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, gl.background_vb);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, gl.background_uv);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
- 
+	glBindVertexArray(gl.background_va);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
- 
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
+	glBindVertexArray(0);
 }
 
 void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
@@ -332,7 +328,7 @@ void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
 	
 	if(show_vram)
 	{
-		glUseProgram(Shader[PROG_VRAM].ProgramID);
+		Shader[PROG_VRAM].Program.Use();
 		glUniform2f(Shader[PROG_VRAM].u_WindowSize, GetWidth(), GetHeight());
 		glUniform4i(Shader[PROG_VRAM].u_DisplaySize, 0, 0, 1024, 512);
 		glUniform4i(Shader[PROG_VRAM].u_DisplayOffset, 0, 0, 0, 0);
@@ -341,7 +337,7 @@ void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
 	{
 		u8 prog = is24bpp ? PROG_FB24 : PROG_FB16;
 
-		glUseProgram(Shader[prog].ProgramID);
+		Shader[prog].Program.Use();
 		glUniform2f(Shader[prog].u_WindowSize, GetWidth(), GetHeight());
 		glUniform4i(Shader[prog].u_DisplaySize, psx.ox, psx.oy, psx.width -1, psx.height -1);
 		glUniform4i(Shader[prog].u_DisplayOffset, psx.offx1, psx.offy1, psx.offx2, psx.offy2);
@@ -363,7 +359,7 @@ void RenderOGL_PSX::Shutdown()
 
 	// Shaders...
 	for(int i = 0; i < PROG_SIZE; i++)
-		glDeleteProgram(Shader[i].ProgramID);
+		Shader[i].Program.Delete();
 
 	// Buffers...
 	glDeleteBuffers(1, &gl.background_va);

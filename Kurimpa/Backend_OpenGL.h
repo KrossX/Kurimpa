@@ -18,6 +18,36 @@
 #ifndef BACKEND_OPENGL_H
 #define BACKEND_OPENGL_H
 
+class OGLShader
+{
+	u32 ID;
+	bool created;
+	bool CheckError();
+
+public:
+	u32 GetID() { return ID; };
+	bool Create(u32 type);
+	bool CompileFromBuffer(const char *buffer, const char *defines);
+	bool CompileFromFile(const char *path, const char *defines);
+	bool Delete();
+};
+
+class OGLProgram
+{
+	u32 ID;
+	bool created;
+	bool CheckError();
+
+public:
+	u32 GetUniformLocation(const char *name);
+	bool Create();
+	bool AttachShader(OGLShader shader);
+	bool Link();
+	bool Use();
+	bool Delete();
+};
+
+
 class Backend_OpenGL
 {
 	RECT oldrect;
@@ -38,9 +68,7 @@ protected:
 	HWND GetHWindow() { return hWindow; };
 	HDC  GetDeviceCtx() { return hDeviceCtx; };
 
-	void CheckProgramError(u32 ProgramID);
-	u32 CompileShader(const char *shader_path, unsigned int type, const char* defines);
-	u32 LoadShaders(const char *vertex_file_path, const char *fragment_file_path, const char* defines);
+	OGLProgram LoadShaders(const char *vpath, const char *fpath, const char* defs);
 	
 	bool GLfail(const char* msg);
 	bool GLfail(const char* msg, u32 err);
