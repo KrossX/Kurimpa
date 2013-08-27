@@ -18,7 +18,9 @@
 #pragma once
 
 
-#if 0
+#define KDEBUG 0
+
+#if KDEBUG > 0
 
 	bool _DebugOpen();
 	void _DebugClose();

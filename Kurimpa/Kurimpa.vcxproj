@@ -89,6 +89,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Backend_OpenGL.h" />
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="General.h" />
     <ClInclude Include="GraphicsSynthesizer.h" />
@@ -97,19 +98,21 @@
     <ClInclude Include="PSemuPro_Interface.h" />
     <ClInclude Include="PSXgpu.h" />
     <ClInclude Include="PSXgpu_Enums.h" />
-    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="RenderOGL_PSX.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="TGA_Header.h" />
     <ClInclude Include="TypeDefs.h" />
     <ClInclude Include="TypeDefs_Pix.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Backend_OpenGL.cpp" />
     <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="GraphicsSynthesizer.cpp" />
     <ClCompile Include="GS_GIF_FIFO.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="PlayStation.cpp" />
     <ClCompile Include="OS_Windows.cpp" />
     <ClCompile Include="PSXgpu.cpp" />
-    <ClCompile Include="Render_OpenGL.cpp" />
+    <ClCompile Include="RenderOGL_PSX.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Exports.def" />

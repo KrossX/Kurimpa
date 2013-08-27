@@ -18,11 +18,10 @@
 #include "General.h"
 #include "PSXgpu_Enums.h"
 #include "PSXgpu.h"
-#include "Renderer.h"
+#include "RenderOGL_PSX.h"
 #include <cmath>
 
-Renderer *render = NULL;
-void *psxmem = NULL;
+RenderOGL_PSX *render = NULL;
 
 #include "PSXgpu_Helpers.inl"
 #include "PSXgpu_Draw.inl"
@@ -32,11 +31,8 @@ int PSXgpu::Init()
 {
 	DebugFunc();
 	//memset(VRAM.BYTE1, 0x00, sizeof(VRAM));
-
-	psxmem = VRAM.BYTE1;
-
+	
 	Reset();
-
 	return 0;
 }
 
@@ -71,8 +67,12 @@ int PSXgpu::Open(HWND hGpuWnd)
 {
 	DebugFunc();
 
-	render = new RenderOGL();
-	if(!render || !render->Init(hGpuWnd)) return -1;
+	render = new RenderOGL_PSX();
+	if(!render || !render->Init(hGpuWnd, VRAM.BYTE1))
+	{
+		PostMessage(hGpuWnd, WM_KEYDOWN, VK_ESCAPE, 0);
+		return -1;
+	}
 
 	return 0;
 }
@@ -80,10 +80,10 @@ int PSXgpu::Open(HWND hGpuWnd)
 int PSXgpu::Close()
 {
 	DebugFunc();
-	
+
 	if(render)
 	{
-		render->Close();
+		render->Shutdown();
 		delete render;
 		render = NULL;
 	}
@@ -218,15 +218,9 @@ void PSXgpu::LaceUpdate()
 	DI.UpdateCentering();
 
 	// This entire mess is for screen position
-	render->origin_x = DI.ox;
-	render->origin_y = DI.oy;
-	render->width  = DI.width;
-	render->height = DI.height;
-	render->offset_x1 = DI.cx;
-	render->offset_y1 = DI.cy;
-	render->offset_x2 = DI.rangeh;
-	render->offset_y2 = DI.oy + DI.rangev - 1;
-
+	render->SetPSXorigin(DI.ox, DI.oy);
+	render->SetPSXsize(DI.width, DI.height);
+	render->SetPSXoffset(DI.cx, DI.rangeh, DI.cy, DI.oy + DI.rangev - 1);
 	render->Present(DI.is24bpp, !!(GPUSTAT & GPUSTAT_DISPDISABLE));
 
 	if( DI.height == 480)
@@ -564,3 +558,4 @@ void PSXgpu::LoadState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 	DRAW_OFFSET    = CTRL[8];
 	DC             = CTRL[9];
 }
+

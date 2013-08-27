@@ -270,7 +270,7 @@ void CALLBACK GPUabout(void)                           // ABOUT?
 	printf("Kurimpa -> GPUAbout...\n");
 }
 
-void CALLBACK  GSabout()
+void CALLBACK GSabout()
 {
 	printf("Kurimpa -> GSabout\n");
 }
@@ -341,9 +341,6 @@ int CALLBACK GPUfreeze(u32 mode,GPUFreeze_t * pF)
 	case 1: // SAVE
 		if(!pF || pF->ulFreezeVersion != 1) return 0;
 		PSXGPU->SaveState(pF->ulStatus, pF->ulControl, pF->psxVRam);
-
-		
-		
 		break;
 
 	case 2: // QUERY
@@ -352,55 +349,25 @@ int CALLBACK GPUfreeze(u32 mode,GPUFreeze_t * pF)
 	};
 
 	return 1;
-
-/*
- //----------------------------------------------------//
- if(ulGetFreezeData==2)                                // 2: info, which save slot is selected? (just for display)
-  {
-   int lSlotNum=*((int *)pF);                        // -> a bit dirty, I know... ehehe
-   lSelectedSlot=lSlotNum+1;
-   BuildDispMenu(0);                                   // -> that's one of my funcs to display the "lSelectedSlot" number
-   return 1;
-  }
- //----------------------------------------------------//
- if(!pF)                    return 0;                  // some checks
- if(pF->ulFreezeVersion!=1) return 0;
-
- if(ulGetFreezeData==1)                                // 1: get data
-  {
-   pF->ulStatus=STATUSREG;
-   memcpy(pF->ulControl,ulStatusControl,256*sizeof(u32));
-   memcpy(pF->psxVRam,  psxVub,         1024*512*2);
-
-   return 1;
-  }
-
- if(ulGetFreezeData!=0) return 0;                      // 0: set data
-
- STATUSREG=pF->ulStatus;
- memcpy(ulStatusControl,pF->ulControl,256*sizeof(u32));
- memcpy(psxVub,         pF->psxVRam,  1024*512*2);
-
-// RESET TEXTURE STORE HERE, IF YOU USE SOMETHING LIKE THAT
-
- GPUwriteStatus(ulStatusControl[0]);
- GPUwriteStatus(ulStatusControl[1]);
- GPUwriteStatus(ulStatusControl[2]);
- GPUwriteStatus(ulStatusControl[3]);
- GPUwriteStatus(ulStatusControl[8]);                   // try to repair things
- GPUwriteStatus(ulStatusControl[6]);
- GPUwriteStatus(ulStatusControl[7]);
- GPUwriteStatus(ulStatusControl[5]);
- GPUwriteStatus(ulStatusControl[4]);
-
- return 1;
- */
-	return 1;
 }
 
 ////////////////////////////////////////////////////////////////////////
 // Who knos what this are for
 ////////////////////////////////////////////////////////////////////////
+
+void CALLBACK GPUclearDynarec(void (CALLBACK *fnc)()) // ??? 
+{
+	printf("Kurimpa -> GPUclearDynarec\n");
+}
+
+////////////////////////////////////////////////////////////////////////
+// the main emu allocs 128x96x3 bytes, and passes a ptr
+// to it in pMem... the plugin has to fill it with
+// 8-8-8 bit BGR screen data (Win 24 bit BMP format 
+// without header). 
+// Beware: the func can be called at any time,
+// so you have to use the frontbuffer to get a fully
+// rendered picture
 
 
 void CALLBACK GPUgetScreenPic(u8* mem)
@@ -408,10 +375,22 @@ void CALLBACK GPUgetScreenPic(u8* mem)
 	printf("Kurimpa -> GPUgetScreenPic [%X]\n", mem);
 }
 
+////////////////////////////////////////////////////////////////////////
+// func will be called with 128x96x3 BGR data.
+// the plugin has to store the data and display
+// it in the upper right corner.
+// If the func is called with a NULL ptr, you can
+// release your picture data and stop displaying
+// the screen pic
+
 void CALLBACK GPUshowScreenPic(u8* mem)
 {
 	printf("Kurimpa -> GPUgetScreenPic [%X]\n", mem);
 }
+
+////////////////////////////////////////////////////////////////////////
+// gun cursor func: player=0-7, x=0-511, y=0-255
+////////////////////////////////////////////////////////////////////////
 
 void CALLBACK GPUcursor(int player, int x, int y)
 {

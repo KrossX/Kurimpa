@@ -1,37 +1,37 @@
 EXPORTS
-    ; Explicit exports can go here
-	;PS2EgetLibType		
-	;PS2EgetLibName		
-	;PS2EgetLibVersion2	
-	;PS2EgetCpuPlatform	
+	; Explicit exports can go here
+	;PS2EgetLibType
+	;PS2EgetLibName
+	;PS2EgetLibVersion2
+	;PS2EgetCpuPlatform
 	;PS2EsetEmuVersion
-	;GSsetBaseMem		
-	;GSinit				
-	;GSshutdown			
+	;GSsetBaseMem
+	;GSinit
+	;GSshutdown
 	;GSopen
-	;GSopen2				
-	;GSclose				
-	;GSreset				
-	;GSwriteCSR			
+	;GSopen2
+	;GSclose
+	;GSreset
+	;GSwriteCSR
 	;GSgifSoftReset
 	;GSgifTransfer
-	;GSgifTransfer1		
-	;GSgifTransfer2		
-	;GSgifTransfer3		
-	;GSvsync				
-	;GSmakeSnapshot		
-	;GSkeyEvent			
-	;GSfreeze            
-	;GSconfigure			
-	;GStest				
-	;GSabout				
-	;GSreadFIFO			
-	;GSreadFIFO2			
+	;GSgifTransfer1
+	;GSgifTransfer2
+	;GSgifTransfer3
+	;GSvsync
+	;GSmakeSnapshot
+	;GSkeyEvent
+	;GSfreeze
+	;GSconfigure
+	;GStest
+	;GSabout
+	;GSreadFIFO
+	;GSreadFIFO2
 	;GSirqCallback
-	;GSsetupRecording		
-	;GSsetGameCRC		
+	;GSsetupRecording
+	;GSsetGameCRC
 	;GSsetFrameSkip
-	;GSsetFrameLimit		
+	;GSsetFrameLimit
 	;GSsetVsync
 	;GSsetExclusive
 	;GSsetSettingsDir
@@ -58,11 +58,12 @@ EXPORTS
 	GPUsetMode
 	GPUupdateLace
 	GPUmakeSnapshot
-    GPUwriteDataMem
-    GPUreadDataMem
-    GPUdisplayText
-    GPUdisplayFlags
+	GPUwriteDataMem
+	GPUreadDataMem
+	GPUdisplayText
+	GPUdisplayFlags
 	GPUfreeze
-    GPUshowScreenPic
-    GPUgetScreenPic
-    GPUcursor
+	GPUshowScreenPic
+	GPUgetScreenPic
+	GPUcursor
+	GPUclearDynarec
