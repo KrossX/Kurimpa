@@ -85,8 +85,7 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 	int attributes[] = {
 	WGL_CONTEXT_MAJOR_VERSION_ARB, VER_MAJOR,
 	WGL_CONTEXT_MINOR_VERSION_ARB, VER_MINOR,
-	WGL_CONTEXT_PROFILE_MASK_ARB , WGL_CONTEXT_CORE_PROFILE_BIT_ARB , 0};
-
+	WGL_CONTEXT_FLAGS_ARB ,  WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, 0};
 	
 	hRenderCtx = wglCreateContextAttribsARB(hDeviceCtx, NULL, attributes);
 	if(!hRenderCtx) return false;
@@ -101,14 +100,14 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 	glGetIntegerv(GL_MAJOR_VERSION, &glVersion[0]);
 	glGetIntegerv(GL_MINOR_VERSION, &glVersion[1]);
 
-	if(glVersion[0] != VER_MAJOR || glVersion[1] != VER_MINOR)
-		return false;
-
 	const GLubyte* glVendorStr   = glGetString(GL_VENDOR);
 	const GLubyte* glRendererStr = glGetString(GL_RENDERER);
 	const GLubyte* glVersionStr  = glGetString(GL_VERSION);
 
 	printf("\n%s\n%s\n%s\n\n", glVendorStr, glRendererStr, glVersionStr);
+
+	if(glVersion[0] < VER_MAJOR && glVersion[1] < VER_MINOR)
+		return false;
 
 	// Yay! All is fine now... supposedly.
 	return true;
@@ -255,7 +254,7 @@ char* ReadFileToBuffer(const char *filename)
 	return buffer;
 }
 
-//---------------
+//---------------------------------------------------------------[OGLShader]
 
 bool OGLShader::CheckError()
 {
@@ -329,7 +328,7 @@ bool OGLShader::Delete()
 	return true;
 }
 
-//--------------
+//---------------------------------------------------------------[OGLProgram]
 
 bool OGLProgram::CheckError()
 {
