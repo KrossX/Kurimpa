@@ -171,8 +171,8 @@ void RenderOGL_PSX::ToggleFullscreen()
 void RenderOGL_PSX::ToggleFiltering()
 {
 	linearfilter = !linearfilter;
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
+	//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
+	//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
 }
 
 void RenderOGL_PSX::ToggleVsync()
@@ -183,9 +183,9 @@ void RenderOGL_PSX::ToggleVsync()
 
 //---------------------------------------------------------------[CONSTANTS]
 
-const GLuint TEX_INTFORMAT = GL_RGB5_A1;
-const GLuint TEX_FORMAT    = GL_RGBA;
-const GLuint TEX_TYPE      = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+const GLuint TEX_INTFORMAT = GL_R16UI;
+const GLuint TEX_FORMAT    = GL_RED_INTEGER;
+const GLuint TEX_TYPE      = GL_UNSIGNED_SHORT;
 
 // An array of 3 vectors which represents 3 vertices
 static const GLfloat g_vertex_quad[] = 
@@ -217,8 +217,8 @@ bool RenderOGL_PSX::CreateVRAMtexture(GLuint &tex)
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BORDER_COLOR, color);
@@ -289,11 +289,9 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 		Prog[i].LoadShaders("shader0_vertex.glsl", "shader0_fragment.glsl", PROG_DEFINE[i]);
 
 	// This are constant for VRAM
+	Prog[PROG_VRAM].Use();
 	Prog[PROG_VRAM].SetDisplaySize(0, 0, 1024, 512);
 	Prog[PROG_VRAM].SetDisplayOffset(0, 0, 0, 0);
-
-	// clear GLerror
-	while(glGetError() != GL_NO_ERROR) {};
 
 	ogl_psx = this;
 	psx.vram = psxvram;
@@ -386,13 +384,12 @@ bool psxProgram::LoadShaders(const char *vpath, const char *fpath, const char* d
 	vertex.Delete();
 	fragment.Delete();
 
-	// Check for errors
-
 	Sampler       = GetUniformLocation("Sampler");
 	WindowSize    = GetUniformLocation("WindowSize");
 	DisplaySize   = GetUniformLocation("DisplaySize");
 	DisplayOffset = GetUniformLocation("DisplayOffset");
 
+	Use();
 	glUniform1i(Sampler, 0);
 	//glBindSampler(0, Prog[i].SamplerID);
 

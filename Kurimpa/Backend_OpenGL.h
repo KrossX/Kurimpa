@@ -70,9 +70,7 @@ protected:
 	HDC  GetDeviceCtx() { return hDeviceCtx; };
 
 	OGLProgram LoadShaders(const char *vpath, const char *fpath, const char* defs);
-	
-	bool GLfail(const char* msg);
-	bool GLfail(const char* msg, u32 err);
+
 	bool CreateContext(HWND hWnd); // return error code
 
 	bool Init(HWND hWin);
@@ -80,6 +78,8 @@ protected:
 	void TakeScreenshot();
 
 public:
+	static bool GLfail(const char* msg);
+	static bool GLfail(const char* msg, u32 err);
 	void UpdateTitle(const char* title);
 };
 

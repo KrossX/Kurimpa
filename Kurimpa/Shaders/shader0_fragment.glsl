@@ -1,5 +1,3 @@
-
-
 precision highp float;
 precision highp int;
 
@@ -13,88 +11,68 @@ uniform ivec4 DisplaySize;
 uniform ivec4 DisplayOffset;
 uniform vec2 WindowSize;
 
-uniform sampler2DRect Sampler;
+uniform usampler2DRect Sampler;
 
 // Ouput data
 out vec3 color;
 
 #ifdef COLOR24
-uint GetTexel24(vec2 pos)
+vec3 GetTexel24(vec2 pos)
 {
 	ivec2 ipos = ivec2(pos);
-	vec4 texel = texelFetch(Sampler, ipos);
-	uvec4 utex = uvec4(texel * 31.0);
-	
-	uint value;
-	value  = utex.r;
-	value |= utex.g <<  5u;
-	value |= utex.b << 10u;
-	value |= (utex.a&1u) << 15u;
+	ivec2 offset = ivec2(1, 0);
 
-	return value;
-}
-
-vec3 GetPixel24(vec2 pos)
-{
 	uint value, color0, color1, color2;
 	
-	int curpix = int(pos.x)%2;
+	int curpix = ipos.x % 2;
 		
 	if(curpix == 0)
 	{
-		pos.x -= float(DisplaySize.x);
-		pos.x *= 1.5;
-		pos.x += float(DisplaySize.x);
+		ipos.x -= DisplaySize.x;
+		ipos.x  = (ipos.x*3)/2;
+		ipos.x += DisplaySize.x;
 		
-		value  = GetTexel24(pos);
+		value  = texelFetch(Sampler, ipos).r;
 		color0 = value & 0xFFu;
 		color1 = (value >> 8u) & 0xFFu;
 		
-		value =  GetTexel24(pos + vec2(1.0, 0.0));
+		value =  texelFetch(Sampler, ipos + offset).r;
 		color2 = value & 0xFFu;
 	}
 	else
 	{
-		pos.x -= float(DisplaySize.x);
-		pos.x = (pos.x - 1.0) * 1.5 + 2.0;
-		pos.x += float(DisplaySize.x);
+		ipos.x -= DisplaySize.x;
+		ipos.x  = ((ipos.x - 1)*3)/2 + 2;
+		ipos.x += DisplaySize.x;
 		
-		value = GetTexel24(pos);
+		value = texelFetch(Sampler, ipos).r;
 		color1 = value & 0xFFu;
 		color2 = (value >> 8u) & 0xFFu;
 		
-		value = GetTexel24(pos - vec2(1.0, 0.0));
+		value = texelFetch(Sampler, ipos - offset).r;
 		color0 = (value >> 8u) & 0xFFu;
 	}
 	
-	vec3 ucolor;
-	ucolor.r = float(color0);
-	ucolor.g = float(color1);
-	ucolor.b = float(color2);
+	uvec3 ucolor;
+	ucolor.r = color0;
+	ucolor.g = color1;
+	ucolor.b = color2;
 	
-	return ucolor;
+	return vec3(ucolor) / 255.0;
 }
 
-vec3 BilinearFilter24(vec2 pos)
-{
-	vec3 color0, colorx, colory, colorxy;
-	
-	vec2 diff = vec2(fract(pos.x), fract(pos.y));
-	vec3 offset = vec3(1.0, 1.0, 0.0);
-	
-	pos = floor(pos);
-	ivec2 ipos = ivec2(pos);
-	
-	color0  = GetPixel24(pos) / 255.0;
-	colorx  = GetPixel24(pos + offset.xz) / 255.0;
-	colory  = GetPixel24(pos + offset.zy) / 255.0;
-	colorxy = GetPixel24(pos + offset.xy) / 255.0;
-	
-	colorx = mix(color0, colorx, diff.x);
-	colory = mix(colory, colorxy, diff.x);
-	color0 = mix(colorx, colory, diff.y);
+#else
 
-	return color0;
+vec3 GetTexel16(vec2 pos)
+{
+	uint value = texelFetch(Sampler, ivec2(pos)).r;
+
+	uvec3 ucolor;
+	ucolor.r = value & 0x1Fu;
+	ucolor.g = (value >> 5u) & 0x1Fu;
+	ucolor.b = (value >> 10u) & 0x1Fu;
+
+	return vec3(ucolor) / 31.0;
 }
 
 #endif
@@ -102,7 +80,7 @@ vec3 BilinearFilter24(vec2 pos)
 void main()
 {
 #ifdef VIEW_VRAM
-	color = texture(Sampler, pos_vram).rgb;
+	color = GetTexel16(pos_vram);
 #else
 
 	if(pos_rect.y < float(DisplaySize.y) || pos_rect.y > float(DisplayOffset.w))
@@ -112,9 +90,9 @@ void main()
 	}
 	
 	#ifdef COLOR24
-	color = BilinearFilter24(pos_rect);
+	color = GetTexel24(pos_rect);
 	#else
-	color = texture(Sampler, pos_rect).rgb;
+	color = GetTexel16(pos_rect);
 	#endif
 	
 #endif

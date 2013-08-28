@@ -187,7 +187,32 @@ bool Backend_OpenGL::GLfail(const char* msg, u32 err)
 
 		if(buffer)
 		{
-			sprintf_s(buffer, buffsize, "Kurimpa -> %s\nOGL: %s (%d)", msg, errstr, err);
+			char *errenum;
+
+			switch(err)
+			{
+			case GL_NO_ERROR:
+				errenum = "GL_NO_ERROR"; break;
+			case GL_INVALID_ENUM:
+				errenum = "GL_INVALID_ENUM"; break;
+			case GL_INVALID_VALUE:
+				errenum = "GL_INVALID_VALUE"; break;
+			case GL_INVALID_OPERATION:
+				errenum = "GL_INVALID_OPERATION"; break;
+			case GL_INVALID_FRAMEBUFFER_OPERATION:
+				errenum = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
+			case GL_OUT_OF_MEMORY:
+				errenum = "GL_OUT_OF_MEMORY"; break;
+			case GL_STACK_UNDERFLOW:
+				errenum = "GL_STACK_UNDERFLOW"; break;
+			case GL_STACK_OVERFLOW:
+				errenum = "GL_STACK_OVERFLOW"; break;
+			default:
+				errenum = "UNKNOWN"; break;
+			};
+
+
+			sprintf_s(buffer, buffsize, "Kurimpa -> %s\nOGL: %s (0x%02X)\n%s", msg, errstr, err, errenum);
 			MessageBoxA(NULL, buffer, "Kurimpa OpenGL Error!", MB_OK | MB_ICONERROR);
 			delete[] buffer;
 		}
