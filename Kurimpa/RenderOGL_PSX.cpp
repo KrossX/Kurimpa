@@ -280,9 +280,9 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 
 	char *PROG_DEFINE[PROG_SIZE] = 
 	{
-		"#version 330 core\n",
-		"#version 330 core\n#define COLOR24\n",
-		"#version 330 core\n#define VIEW_VRAM\n"
+		"#version 140\n",
+		"#version 140\n#define COLOR24\n",
+		"#version 140\n#define VIEW_VRAM\n"
 	};
 
 	for(int i = 0; i < PROG_SIZE; i++)
@@ -299,45 +299,6 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 	psx.vram = psxvram;
 
 	return true;
-}
-
-//---------------------------------------------------------------[DRAWING]
-
-void  RenderOGL_PSX::DrawBackground()
-{
-	glBindVertexArray(gl.background_va);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glBindVertexArray(0);
-}
-
-void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
-{
-	if(disabled && !show_vram)
-	{
-		glClear(GL_COLOR_BUFFER_BIT);// | GL_DEPTH_BUFFER_BIT);
-		SwapBuffers(GetDeviceCtx());
-		return;
-	}
-
-	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, TEX_FORMAT, TEX_TYPE, psx.vram);
-	
-	if(show_vram)
-	{
-		Prog[PROG_VRAM].Use();
-		Prog[PROG_VRAM].SetWindowSize(GetWidth(), GetHeight());
-	}
-	else
-	{
-		u8 prog = is24bpp ? PROG_FB24 : PROG_FB16;
-
-		Prog[prog].Use();
-		Prog[prog].SetWindowSize(GetWidth(), GetHeight());
-		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width -1, psx.height -1);
-		Prog[prog].SetDisplayOffset(psx.offx1, psx.offy1, psx.offx2, psx.offy2);
-	}
-	
-	DrawBackground();
-	SwapBuffers(GetDeviceCtx());
 }
 
 void RenderOGL_PSX::Shutdown()
@@ -365,6 +326,41 @@ void RenderOGL_PSX::Shutdown()
 	Backend_OpenGL::Shutdown();
 }
 
+//---------------------------------------------------------------[DRAWING]
+
+void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
+{
+	if(disabled && !show_vram)
+	{
+		glClear(GL_COLOR_BUFFER_BIT);// | GL_DEPTH_BUFFER_BIT);
+		SwapBuffers(GetDeviceCtx());
+		return;
+	}
+
+	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, TEX_FORMAT, TEX_TYPE, psx.vram);
+	
+	if(show_vram)
+	{
+		Prog[PROG_VRAM].Use();
+		Prog[PROG_VRAM].SetWindowSize(GetWidth(), GetHeight());
+	}
+	else
+	{
+		u8 prog = is24bpp ? PROG_FB24 : PROG_FB16;
+
+		Prog[prog].Use();
+		Prog[prog].SetWindowSize(GetWidth(), GetHeight());
+		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width -1, psx.height -1);
+		Prog[prog].SetDisplayOffset(psx.offx1, psx.offy1, psx.offx2, psx.offy2);
+	}
+	
+	glBindVertexArray(gl.background_va);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+
+	SwapBuffers(GetDeviceCtx());
+}
+
 //---------------------------------------------------------------[SHADER]
 
 bool psxProgram::LoadShaders(const char *vpath, const char *fpath, const char* defs)
@@ -378,8 +374,13 @@ bool psxProgram::LoadShaders(const char *vpath, const char *fpath, const char* d
 	fragment.CompileFromFile(fpath, defs);
 
 	Create();
+	
 	AttachShader(vertex);
 	AttachShader(fragment);
+
+	BindAttribLocation(0, "vertexPosition_modelspace");
+	BindAttribLocation(1, "vertexUV");
+
 	Link();
 
 	vertex.Delete();

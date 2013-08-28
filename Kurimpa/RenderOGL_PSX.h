@@ -68,8 +68,6 @@ class RenderOGL_PSX : public Backend_OpenGL
 	bool CreateVRAMtexture(u32 &tex);
 	bool PrepareDisplayQuad();
 
-	void DrawBackground(); // That display quad
-
 	void ToggleVsync();
 	void ToggleFiltering();
 	void ToggleFullscreen();

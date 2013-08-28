@@ -29,7 +29,7 @@
 //---------------------------------------------------------------[CONSTANTS]
 
 const GLuint VER_MAJOR = 3;
-const GLuint VER_MINOR = 3;
+const GLuint VER_MINOR = 1;
 
 //---------------------------------------------------------------[CONTEXT]
 
@@ -85,7 +85,7 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 	int attributes[] = {
 	WGL_CONTEXT_MAJOR_VERSION_ARB, VER_MAJOR,
 	WGL_CONTEXT_MINOR_VERSION_ARB, VER_MINOR,
-	WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, 0 };
+	WGL_CONTEXT_PROFILE_MASK_ARB , WGL_CONTEXT_CORE_PROFILE_BIT_ARB , 0};
 
 	
 	hRenderCtx = wglCreateContextAttribsARB(hDeviceCtx, NULL, attributes);
@@ -103,6 +103,12 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 
 	if(glVersion[0] != VER_MAJOR || glVersion[1] != VER_MINOR)
 		return false;
+
+	const GLubyte* glVendorStr   = glGetString(GL_VENDOR);
+	const GLubyte* glRendererStr = glGetString(GL_RENDERER);
+	const GLubyte* glVersionStr  = glGetString(GL_VERSION);
+
+	printf("\n%s\n%s\n%s\n\n", glVendorStr, glRendererStr, glVersionStr);
 
 	// Yay! All is fine now... supposedly.
 	return true;
@@ -138,8 +144,6 @@ void Backend_OpenGL::SetScreensize(float w, float h)
 {
 	width = w;
 	height = h;
-
-	printf("Screensize: %f, %f\n", width, height);
 }
 
 void Backend_OpenGL::SetFullscreen()
@@ -262,7 +266,8 @@ bool OGLShader::CompileFromBuffer(const char *buffer, const char *defines)
 	size_t buffer_len = strlen(buffer);
 	size_t defines_len = defines ? strlen(defines) : 0;
 
-	char *shaderbuff = new char[buffer_len + defines_len];
+	char *shaderbuff = new char[buffer_len + defines_len + 5];
+	memset(&shaderbuff[buffer_len + defines_len - 1], 0x00, 5);
 	
 	if(defines_len)
 		memcpy(shaderbuff, defines, defines_len);
@@ -272,6 +277,8 @@ bool OGLShader::CompileFromBuffer(const char *buffer, const char *defines)
 	const GLchar* glbuff = shaderbuff;
 	glShaderSource(ID, 1, &glbuff, NULL);
 	glCompileShader(ID);
+
+	CheckError();
 
 	delete[] shaderbuff;
 	return true;
@@ -356,6 +363,11 @@ bool OGLProgram::Delete()
 u32 OGLProgram::GetUniformLocation(const char *name)
 {
 	return glGetUniformLocation(ID, name);
+}
+
+void OGLProgram::BindAttribLocation(int index, const char *name)
+{
+	glBindAttribLocation(ID, index, name);
 }
 
 //---------------------------------------------------------------[SCREENSHOT]

@@ -1,3 +1,8 @@
+
+
+precision highp float;
+precision highp int;
+
 #ifdef VIEW_VRAM
 	in vec2 pos_vram;
 #else
@@ -22,9 +27,9 @@ uint GetTexel24(vec2 pos)
 	
 	uint value;
 	value  = utex.r;
-	value |= utex.g <<  5;
-	value |= utex.b << 10;
-	value |= (utex.a&1u) << 15;
+	value |= utex.g <<  5u;
+	value |= utex.b << 10u;
+	value |= (utex.a&1u) << 15u;
 
 	return value;
 }
@@ -37,29 +42,29 @@ vec3 GetPixel24(vec2 pos)
 		
 	if(curpix == 0)
 	{
-		pos.x -= DisplaySize.x;
+		pos.x -= float(DisplaySize.x);
 		pos.x *= 1.5;
-		pos.x += DisplaySize.x;
+		pos.x += float(DisplaySize.x);
 		
 		value  = GetTexel24(pos);
 		color0 = value & 0xFFu;
-		color1 = (value >> 8) & 0xFFu;
+		color1 = (value >> 8u) & 0xFFu;
 		
 		value =  GetTexel24(pos + vec2(1.0, 0.0));
 		color2 = value & 0xFFu;
 	}
 	else
 	{
-		pos.x -= DisplaySize.x;
+		pos.x -= float(DisplaySize.x);
 		pos.x = (pos.x - 1.0) * 1.5 + 2.0;
-		pos.x += DisplaySize.x;
+		pos.x += float(DisplaySize.x);
 		
 		value = GetTexel24(pos);
 		color1 = value & 0xFFu;
-		color2 = (value >> 8) & 0xFFu;
+		color2 = (value >> 8u) & 0xFFu;
 		
 		value = GetTexel24(pos - vec2(1.0, 0.0));
-		color0 = (value >> 8) & 0xFFu;
+		color0 = (value >> 8u) & 0xFFu;
 	}
 	
 	vec3 ucolor;
@@ -100,7 +105,7 @@ void main()
 	color = texture(Sampler, pos_vram).rgb;
 #else
 
-	if(pos_rect.y < DisplaySize.y || pos_rect.y > DisplayOffset.w)
+	if(pos_rect.y < float(DisplaySize.y) || pos_rect.y > float(DisplayOffset.w))
 	{
 		color = vec3(0.0, 0.0, 0.0);  
 		return;
@@ -114,6 +119,5 @@ void main()
 	
 #endif
 }
-
 
  

@@ -39,6 +39,7 @@ class OGLProgram
 	bool CheckError();
 
 public:
+	void BindAttribLocation(int index, const char *name);
 	u32 GetUniformLocation(const char *name);
 	bool Create();
 	bool AttachShader(OGLShader shader);
