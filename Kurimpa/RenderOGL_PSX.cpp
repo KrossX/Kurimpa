@@ -252,6 +252,8 @@ bool  RenderOGL_PSX::PrepareDisplayQuad()
 	return !GLfail("PrepareQuad");
 }
 
+#include "Shaders\RenderOGL_PSX_Shaders.inl"
+
 bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 {
 	//HWND hWin = CreateGLWindow(L"Kurimpa", 640, 480);
@@ -278,15 +280,8 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 	if(!CreateVRAMtexture(gl.tVRAM)) return false;
 	if(!PrepareDisplayQuad()) return false;
 
-	char *PROG_DEFINE[PROG_SIZE] = 
-	{
-		"#version 140\n",
-		"#version 140\n#define COLOR24\n",
-		"#version 140\n#define VIEW_VRAM\n"
-	};
-
 	for(int i = 0; i < PROG_SIZE; i++)
-		Prog[i].LoadShaders("shader0_vertex.glsl", "shader0_fragment.glsl", PROG_DEFINE[i]);
+		Prog[i].LoadShaders(shader::main_vertex, shader::main_frag, shader::define[i]);
 
 	// This are constant for VRAM
 	Prog[PROG_VRAM].Use();
@@ -361,15 +356,15 @@ void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
 
 //---------------------------------------------------------------[SHADER]
 
-bool psxProgram::LoadShaders(const char *vpath, const char *fpath, const char* defs)
+bool psxProgram::LoadShaders(const char *vbuff, const char *fbuff, const char* defs)
 {
 	OGLShader fragment, vertex;
 
 	vertex.Create(GL_VERTEX_SHADER);
-	vertex.CompileFromFile(vpath, defs);
+	vertex.CompileFromBuffer(vbuff, defs);
 
 	fragment.Create(GL_FRAGMENT_SHADER);
-	fragment.CompileFromFile(fpath, defs);
+	fragment.CompileFromBuffer(fbuff, defs);
 
 	Create();
 	

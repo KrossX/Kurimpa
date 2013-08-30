@@ -9,13 +9,11 @@ Download: http://tiny.cc/magicaltools
 Description and information
 -------------------------------------------------------------------------------
 
-Currently, a software plugin for PSX emulators. Requires OGL3 support.
-It's just the base for a hardware plugin for the same platform.
+Currently, a software plugin for PSX emulators. It's just the base for a 
+hardware plugin for the same platform.
 
+Requires OpenGL 3.1 support.
 No settings, and no INI either.
-
-Distributed with DLL and GLSL shaders. The GLSL shaders must be placed
-alongside the emulator executable (not in the plugins folder).
 
 Keys:
 ALT+ENTER, fullscreen toggle

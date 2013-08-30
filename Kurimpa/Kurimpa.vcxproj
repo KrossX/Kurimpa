@@ -60,7 +60,7 @@
       <AdditionalDependencies>opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Shaders\*.glsl $(OutputPath) /Y</Command>
+      <Command>copy $(SolutionDir)README $(OutputPath)README.TXT /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -85,7 +85,7 @@
       <AdditionalDependencies>opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)Shaders\*.glsl $(OutputPath) /Y</Command>
+      <Command>copy $(SolutionDir)README $(OutputPath)README.TXT /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -119,6 +119,7 @@
     <None Include="PSXgpu_Draw.inl" />
     <None Include="PSXgpu_Helpers.inl" />
     <None Include="PSXgpu_MemTransfer.inl" />
+    <None Include="Shaders\RenderOGL_PSX_Shaders.inl" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Kurimpa.rc" />

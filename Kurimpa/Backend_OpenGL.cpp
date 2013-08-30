@@ -311,7 +311,11 @@ bool OGLShader::CompileFromBuffer(const char *buffer, const char *defines)
 bool OGLShader::CompileFromFile(const char *path, const char *defines)
 {
 	const char* filebuff = ReadFileToBuffer(path);
-	if(!filebuff) return false;
+	if(!filebuff) 
+	{
+		printf("Kurimpa -> Error!! Could not open shader: %s\n", path);
+		return false;
+	}
 	
 	bool result = CompileFromBuffer(filebuff, defines);
 

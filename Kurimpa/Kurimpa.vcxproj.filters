@@ -16,6 +16,9 @@
     <Filter Include="Misc">
       <UniqueIdentifier>{6cb16cb1-335c-4f68-9510-6cb4f537a6b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{7f61bcb5-0aa2-419f-99e4-844d5f93090f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
@@ -99,6 +102,9 @@
     </None>
     <None Include="PSXgpu_Helpers.inl">
       <Filter>Source Files</Filter>
+    </None>
+    <None Include="Shaders\RenderOGL_PSX_Shaders.inl">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
