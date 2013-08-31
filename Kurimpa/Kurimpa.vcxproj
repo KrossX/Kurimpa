@@ -119,6 +119,7 @@
     <None Include="PSXgpu_Draw.inl" />
     <None Include="PSXgpu_Helpers.inl" />
     <None Include="PSXgpu_MemTransfer.inl" />
+    <None Include="Shaders\RenderOGL_Framebuffer_Shaders.inl" />
     <None Include="Shaders\RenderOGL_PSX_Shaders.inl" />
   </ItemGroup>
   <ItemGroup>

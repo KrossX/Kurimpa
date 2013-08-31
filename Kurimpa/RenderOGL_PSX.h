@@ -22,12 +22,12 @@
 class psxProgram : public OGLProgram
 {
 	u32 Sampler;
-	u32 WindowSize, DisplaySize;
+	u32 DisplaySize;
 	u32 DisplayOffset;
 
 public:
-	bool LoadShaders(const char *vpath, const char *fpath, const char* defs);
-	void SetWindowSize(float width, float height);
+	bool LoadShadersFromFile(const char *vpath, const char *fpath, const char* defs);
+	bool LoadShadersFromBuff(const char *vbuff, const char *fbuff, const char* defs);
 	void SetDisplaySize(int ox, int oy, int width, int height);
 	void SetDisplayOffset(int offx1, int offy1, int offx2, int offy2);
 };
@@ -66,8 +66,8 @@ class RenderOGL_PSX : public Backend_OpenGL
 	} gl;
 
 	bool CreateVRAMtexture(u32 &tex);
-	bool PrepareDisplayQuad();
 
+	void ToggleVRAM();
 	void ToggleVsync();
 	void ToggleFiltering();
 	void ToggleFullscreen();
@@ -76,9 +76,9 @@ class RenderOGL_PSX : public Backend_OpenGL
 	void TakeVRAMshot();
 
 public:
-	void SetPSXorigin(int ox, int oy) { psx.ox = ox; psx.oy = oy; };
-	void SetPSXsize(int width, int height) { psx.width = width; psx.height = height; };
-	void SetPSXoffset(int x1, int x2, int y1, int y2) { psx.offx1 = x1; psx.offx2 = x2; psx.offy1 = y1; psx.offy2 = y2; };
+	void SetDisplayOffset(int ox, int oy);
+	void SetDisplayMode(int width, int height);
+	void SetPSXoffset(int x1, int x2, int y1, int y2);
 
 	void WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 	void Present(bool is24bpp, bool disabled);

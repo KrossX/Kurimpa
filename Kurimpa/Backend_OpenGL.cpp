@@ -128,6 +128,11 @@ bool Backend_OpenGL::Init(HWND hWin)
 	oldrect.top = 200;
 	oldrect.left = 200;
 
+	fbwidth = 0;
+	fbheight = 0;
+
+	fbfiltering = true;
+
 	return true;
 }
 
@@ -137,28 +142,54 @@ void Backend_OpenGL::UpdateTitle(const char* title)
 		SetWindowTextA(hWindow, title);
 }
 
-//---------------------------------------------------------------[MISC]
+//---------------------------------------------------------------[DISPLAY]
 
-void Backend_OpenGL::SetScreensize(float w, float h)
+void Backend_OpenGL::UpdateScreenAspect()
 {
-	width = w;
-	height = h;
+	int w = scwidth;
+	int h = scheight;
+	float cur_ratio = (float)w / (float)h;
+	
+	if(cur_ratio > aspectr)
+		w  = (int)(h * aspectr);
+	else
+		h = (int)(w / aspectr);
+
+	viewport.top = (scheight - h) / 2;
+	viewport.left = (scwidth - w) / 2;
+	viewport.right = w;
+	viewport.bottom = h;
+
+	glClear(GL_COLOR_BUFFER_BIT);
+	SwapBuffers(GetDeviceCtx());
+	glClear(GL_COLOR_BUFFER_BIT);
 }
+
+void Backend_OpenGL::SetAspectRatio(float ratio)
+{
+	aspectr = ratio;
+	UpdateScreenAspect();
+}
+
 
 void Backend_OpenGL::SetFullscreen()
 {
-	int width = GetSystemMetrics(SM_CXSCREEN);
-	int height = GetSystemMetrics(SM_CYSCREEN);
+	scwidth = GetSystemMetrics(SM_CXSCREEN);
+	scheight = GetSystemMetrics(SM_CYSCREEN);
 	
 	GetWindowRect(hWindow, &oldrect);
 	LONG newstyle = oldstyle & ~(WS_CAPTION | WS_BORDER);
 
+	UpdateScreenAspect();
 	SetWindowLong(hWindow, GWL_STYLE, newstyle);
-	SetWindowPos(hWindow, HWND_TOPMOST, 0, 0, width, height, 0);
+	SetWindowPos(hWindow, HWND_TOPMOST, 0, 0, scwidth, scheight, 0);
 }
 
 void Backend_OpenGL::SetWindowed(int width, int height)
 {
+	scwidth = width;
+	scheight = height;
+
 	RECT size; 
 	size.top = 0; size.bottom = height;
 	size.left = 0; size.right = width;
@@ -169,7 +200,151 @@ void Backend_OpenGL::SetWindowed(int width, int height)
 	width = size.right - size.left;
 	height = size.bottom - size.top;
 
+	UpdateScreenAspect();
 	SetWindowPos(hWindow, HWND_TOP, oldrect.left, oldrect.top, width, height, 0);
+}
+
+//---------------------------------------------------------------[FRAMEBUFFER]
+#include "Shaders\RenderOGL_Framebuffer_Shaders.inl"
+
+bool Backend_OpenGL::InitFramebuffer(int width, int height)
+{
+	glGenFramebuffers(1, &fbid);
+	SetFramebufferSize(width, height);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbid);
+	GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+
+	if(status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		printf("Kurimpa -> Error creating framebuffer!\n");
+		return false;
+	}
+
+	// Framebuffer main shader
+
+	OGLShader fragment, vertex;
+
+	vertex.Create(GL_VERTEX_SHADER);
+	vertex.CompileFromBuffer(shaders::fb_vertex, shaders::fb_define);
+
+	fragment.Create(GL_FRAGMENT_SHADER);
+	fragment.CompileFromBuffer(shaders::fb_frag, shaders::fb_define);
+
+	fbprog.Create();
+	fbprog.AttachShader(vertex);
+	fbprog.AttachShader(fragment);
+	fbprog.BindAttribLocation(0, "QuadPos");
+	fbprog.BindAttribLocation(1, "QuadUV");
+	fbprog.Link();
+
+	u32 sampler = fbprog.GetUniformLocation("framebuffer");
+	fbprog.Use();
+	glUniform1i(sampler, 0);
+	
+	return true;
+}
+
+// An array of 3 vectors which represents 3 vertices
+static const GLfloat g_vertex_quad[] = 
+{
+   -1.0f, -1.0f, 0.0f,
+   -1.0f,  1.0f, 0.0f,
+    1.0f, -1.0f, 0.0f,
+    1.0f,  1.0f, 0.0f,
+};
+
+static const GLfloat g_uv_quad[] = 
+{
+   0.0f, 0.0f,
+   0.0f, 1.0f,
+   1.0f, 0.0f,
+   1.0f, 1.0f,
+};
+
+bool Backend_OpenGL::PrepareDisplayQuad()
+{
+	glGenVertexArrays(1, &quadva);
+	glBindVertexArray(quadva);
+	
+	glGenBuffers(1, &quadvb);
+	glBindBuffer(GL_ARRAY_BUFFER, quadvb);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_quad), g_vertex_quad, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glGenBuffers(1, &quaduv);
+	glBindBuffer(GL_ARRAY_BUFFER, quaduv);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_quad), g_uv_quad, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
+
+	return !GLfail("PrepareQuad");
+}
+
+void Backend_OpenGL::SetFramebufferSize(int width, int height)
+{
+	if(fbwidth == width && fbheight == height) return;
+	if(fbcolor) glDeleteTextures(1, &fbcolor);
+
+	fbwidth = width;
+	fbheight = height;
+
+	glGenTextures(1, &fbcolor);
+
+	glBindTexture(GL_TEXTURE_2D, fbcolor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, fbfiltering ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, fbfiltering ? GL_LINEAR : GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	float color[] = { 0.0f, 0.0f, 0.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbid);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbcolor, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Backend_OpenGL::SetFBfiltering(bool linear)
+{
+	fbfiltering = linear;
+	glBindTexture(GL_TEXTURE_2D, fbcolor);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Backend_OpenGL::BindFramebuffer()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, fbid);
+}
+
+void Backend_OpenGL::DrawDisplayQuad()
+{
+	glBindVertexArray(quadva);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+
+void Backend_OpenGL::EndFrame()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(viewport.left, viewport.top, viewport.right, viewport.bottom);
+
+	fbprog.Use();
+
+	glBindTexture(GL_TEXTURE_2D, fbcolor);
+	glActiveTexture(GL_TEXTURE0);
+	DrawDisplayQuad();
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	SwapBuffers(GetDeviceCtx());
 }
 
 //---------------------------------------------------------------[ERRORCHECK]
@@ -420,8 +595,8 @@ void Backend_OpenGL::TakeScreenshot()
 
 	if(dump)
 	{
-		int w = (int)width;
-		int h = (int)height;
+		int w = scwidth;
+		int h = scheight;
 
 		u32 size = w * h * 3; // * 4 is using Alpha
 		u8 *buffer = new u8[size];

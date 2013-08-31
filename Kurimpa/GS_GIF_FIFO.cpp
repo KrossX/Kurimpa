@@ -35,7 +35,7 @@ void GraphicsSynthesizer::ReadFIFO2(u64* mem, u32 qwc)
 	// Replace for transfer here.
 	//Regs.Priviledged.BUSDIR.DIR = 0;
 	
-	printf("Kurimpa -> GS : ReadFIFO2 [%X|%d] :: ", mem, qwc);
+	printf("Kurimpa -> GS : ReadFIFO2 [%X|%u] :: ", mem, qwc);
 }
 
 void GraphicsSynthesizer::GIF_Transfer(const u8* mem, u32 size)
@@ -50,10 +50,10 @@ void GraphicsSynthesizer::GIF_Transfer1(u8* mem, u32 addr)
 
 void GraphicsSynthesizer::GIF_Transfer2(u8* mem, u32 size)
 {
-	printf("Kurimpa -> GS : GIF_Transfer2 [%X|%d]\n", mem, size);
+	printf("Kurimpa -> GS : GIF_Transfer2 [%X|%u]\n", mem, size);
 }
 
 void GraphicsSynthesizer::GIF_Transfer3(u8* mem, u32 size)
 {
-	printf("Kurimpa -> GS : GIF_Transfer3 [%X|%d]\n", mem, size);
+	printf("Kurimpa -> GS : GIF_Transfer3 [%X|%u]\n", mem, size);
 }

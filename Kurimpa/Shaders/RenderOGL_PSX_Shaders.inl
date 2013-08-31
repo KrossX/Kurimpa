@@ -11,8 +11,8 @@ namespace shader
 		"precision highp float;\n" \
 		"precision highp int;\n" \
 
-		"in vec3 vertexPosition_modelspace;\n" \
-		"in vec2 vertexUV;\n" \
+		"in vec3 QuadPos;\n" \
+		"in vec2 QuadUV;\n" \
 
 		"#ifdef VIEW_VRAM\n" \
 		"	out vec2 pos_vram;\n" \
@@ -25,12 +25,13 @@ namespace shader
 
 		"void main()\n" \
 		"{\n" \
-		"	gl_Position = vec4(vertexPosition_modelspace, 1);\n" \
+		"	gl_Position = vec4(QuadPos, 1);\n" \
+		"	vec2 newUV = vec2(QuadUV.x, 1.0 - QuadUV.y);\n" \
 
 		"#ifdef VIEW_VRAM\n" \
-		"	pos_vram = vertexUV * vec2(1024.0, 512.0);\n" \
+		"	pos_vram = newUV * vec2(1024.0, 512.0) + vec2(0.5, 0.5);\n" \
 		"#else\n" \
-		"	pos_rect = vertexUV * vec2(DisplaySize.zw) + vec2(DisplaySize.xy) - vec2(DisplayOffset.xy);\n" \
+		"	pos_rect = newUV * vec2(DisplaySize.zw) + vec2(DisplaySize.xy) + vec2(0.5, 0.5);\n" \
 		"#endif\n" \
 		"}\n";
 
@@ -46,7 +47,6 @@ namespace shader
 
 		"uniform ivec4 DisplaySize;\n" \
 		"uniform ivec4 DisplayOffset;\n" \
-		"uniform vec2 WindowSize;\n" \
 
 		"uniform usampler2DRect Sampler;\n" \
 
@@ -118,19 +118,11 @@ namespace shader
 		"#ifdef VIEW_VRAM\n" \
 		"	color = GetTexel16(pos_vram);\n" \
 		"#else\n" \
-		"\n" \
-		"	if(pos_rect.y < float(DisplaySize.y) || pos_rect.y > float(DisplayOffset.w))\n" \
-		"	{\n" \
-		"		color = vec3(0.0, 0.0, 0.0);  \n" \
-		"		return;\n" \
-		"	}\n" \
-
 		"	#ifdef COLOR24\n" \
 		"	color = GetTexel24(pos_rect);\n" \
 		"	#else\n" \
 		"	color = GetTexel16(pos_rect);\n" \
 		"	#endif\n" \
-
 		"#endif\n" \
 		"}\n";
 

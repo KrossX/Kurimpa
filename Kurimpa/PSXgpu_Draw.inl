@@ -25,30 +25,44 @@ s8 DitherMatrix[4][4] =
 
 static inline u32 ModulateTex(u32 color, u16 texel)
 {
-	Pixel16 t(texel);
-	Pixel32 c(color);
+	RGBA5551 t; t.RAW = texel;
+	RGBA8 c; c.RAW = color;
 
-	u16 Cr = (c.pix.R * t.pix.R) >> 4;
-	u16 Cg = (c.pix.G * t.pix.G) >> 4;
-	u16 Cb = (c.pix.B * t.pix.B) >> 4;
+	u16 Cr = (c.R * t.R) >> 4;
+	u16 Cg = (c.G * t.G) >> 4;
+	u16 Cb = (c.B * t.B) >> 4;
 
-	c.pix.R = Cr > 0xFF ? 0xFF : Cr;
-	c.pix.G = Cg > 0xFF ? 0xFF : Cg;
-	c.pix.B = Cb > 0xFF ? 0xFF : Cb;
+	c.R = Cr > 0xFF ? 0xFF : Cr;
+	c.G = Cg > 0xFF ? 0xFF : Cg;
+	c.B = Cb > 0xFF ? 0xFF : Cb;
 
-	return c.pix.RAW;
+	return c.RAW;
 }
 
 static inline u16 GetPix16(u32 in)
 {
 	RGBA8 pin; pin.RAW = in;
-	return Pixel16(pin.R >> 3, pin.G >> 3, pin.B >> 3).pix.RAW;
+
+	RGBA5551 pix16;
+	pix16.R = pin.R >> 3;
+	pix16.G = pin.G >> 3;
+	pix16.B = pin.B >> 3;
+	pix16.A = 0;
+
+	return pix16.RAW;
 }
 
 static inline u32 GetPix24(u16 in)
 {
 	RGBA5551 pin; pin.RAW = in;
-	return Pixel32((pin.R * 0xFF) / 0x1F, (pin.G * 0xFF) / 0x1F, (pin.B * 0xFF) / 0x1F).pix.RAW;
+
+	RGBA8 pix32;
+	pix32.R = (pin.R * 0xFF) / 0x1F;
+	pix32.G = (pin.G * 0xFF) / 0x1F;
+	pix32.B = (pin.B * 0xFF) / 0x1F;
+	pix32.A = 0;
+
+	return pix32.RAW;
 }
 
 static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
@@ -65,7 +79,7 @@ static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
 	pin.G = (G > 0xFF ? 0xFF : G < 0 ? 0 : G) & 0xFF;
 	pin.B = (B > 0xFF ? 0xFF : B < 0 ? 0 : B) & 0xFF;
 
-	return Pixel16(pin.R >> 3, pin.G >> 3, pin.B >> 3).pix.RAW;
+	return GetPix16(pin.RAW);
 }
 
 static inline VEC3 GetColorDiff(u32 c1, u32 c2, int len)
@@ -704,7 +718,7 @@ void PSXgpu::DrawLineS(u32 data)
 		if(data == 0x55555555) SetReady();
 		else
 		{
-			u8 vx = gpcount % 2 ? 0 : 1; 
+			u8 vx = (gpcount % 2) ? 0 : 1; 
 			vertex[vx].SetV(data);
 			RasterLine<RENDER_FLAT>();
 		}

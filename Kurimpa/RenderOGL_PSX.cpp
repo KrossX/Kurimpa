@@ -45,7 +45,7 @@ void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 		{
 		case VK_MULTIPLY: ToggleFiltering(); break;
 		case VK_F9: ToggleVsync(); break;
-		case VK_F11: show_vram = !show_vram; WindowResize(); break;
+		case VK_F11: ToggleVRAM(); break;
 		case VK_RETURN: if(kbuff[VK_MENU]) ToggleFullscreen(); break;
 		}
 		break;
@@ -64,7 +64,7 @@ void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 		break;
 
 	case WM_WINDOWPOSCHANGED:
-		WindowResize();
+		//WindowResize();
 		break;
 	}
 }
@@ -118,46 +118,20 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 //---------------------------------------------------------------[TOGGLES]
 
-void RenderOGL_PSX::WindowResize()
+void RenderOGL_PSX::ToggleVRAM()
 {
-	RECT rect;
-	GetClientRect(GetHWindow(), &rect);
-
-	static int w = 0;
-	static int h = 0;
-
-	if(w == rect.right && h == rect.bottom)
-	{
-		static bool old_show = false;
-		if(old_show == show_vram) return;
-		old_show = show_vram;
-	}
-
-	w = rect.right;
-	h = rect.bottom;
+	show_vram = !show_vram;
 
 	if(show_vram)
 	{
-		int height21 = w / 2;
-		int padtop = (h - height21) / 2;
-
-		glViewport(0, padtop, w, height21);
+		SetAspectRatio(1024.0f/512.0f);
+		SetFramebufferSize(1024, 512);
 	}
 	else
 	{
-		int width43 = (h * 4) / 3;
-		int padleft = (w - width43) / 2;
-
-		glViewport(padleft, 0, width43, h);
+		SetAspectRatio(640.0f/480.0f);
+		SetFramebufferSize(psx.width, psx.height);
 	}
-
-	// clear both buffers
-
-	glClear(GL_COLOR_BUFFER_BIT);
-	SwapBuffers(GetDeviceCtx());
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	SetScreensize(w * 1.0f, h * 1.0f);
 }
 
 void RenderOGL_PSX::ToggleFullscreen()
@@ -171,8 +145,7 @@ void RenderOGL_PSX::ToggleFullscreen()
 void RenderOGL_PSX::ToggleFiltering()
 {
 	linearfilter = !linearfilter;
-	//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
-	//glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, linearfilter ? GL_LINEAR : GL_NEAREST);
+	SetFBfiltering(linearfilter);
 }
 
 void RenderOGL_PSX::ToggleVsync()
@@ -181,28 +154,29 @@ void RenderOGL_PSX::ToggleVsync()
 	wglSwapIntervalEXT(usevsync ? 1 : 0);
 }
 
+//---------------------------------------------------------------[DISPLAY]
+
+void RenderOGL_PSX::SetDisplayOffset(int ox, int oy)
+{
+	psx.ox = ox; psx.oy = oy;
+};
+
+void RenderOGL_PSX::SetDisplayMode(int width, int height)
+{
+	psx.width = width; psx.height = height;
+	if(!show_vram) SetFramebufferSize(width, height);
+};
+
+void RenderOGL_PSX::SetPSXoffset(int x1, int x2, int y1, int y2)
+{
+	psx.offx1 = x1; psx.offx2 = x2; psx.offy1 = y1; psx.offy2 = y2;
+};
+
 //---------------------------------------------------------------[CONSTANTS]
 
 const GLuint TEX_INTFORMAT = GL_R16UI;
 const GLuint TEX_FORMAT    = GL_RED_INTEGER;
 const GLuint TEX_TYPE      = GL_UNSIGNED_SHORT;
-
-// An array of 3 vectors which represents 3 vertices
-static const GLfloat g_vertex_quad[] = 
-{
-   -1.0f, -1.0f, 0.0f,
-   -1.0f,  1.0f, 0.0f,
-    1.0f, -1.0f, 0.0f,
-    1.0f,  1.0f, 0.0f,
-};
-
-static const GLfloat g_uv_quad[] = 
-{
-   0.0f, 1.0f,
-   0.0f, 0.0f,
-   1.0f, 1.0f,
-   1.0f, 0.0f,
-};
 
 //---------------------------------------------------------------[INIT]
 
@@ -214,15 +188,12 @@ bool RenderOGL_PSX::CreateVRAMtexture(GLuint &tex)
 	glBindTexture(GL_TEXTURE_RECTANGLE, tex);
 	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, TEX_INTFORMAT, 1024, 512, 0, TEX_FORMAT, TEX_TYPE, 0);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BORDER_COLOR, color);
-	
 	if(GLfail("Create tVRAM")) return false;
 	
 	glActiveTexture(GL_TEXTURE0);
@@ -230,27 +201,6 @@ bool RenderOGL_PSX::CreateVRAMtexture(GLuint &tex)
 	return true;
 }
 
-bool  RenderOGL_PSX::PrepareDisplayQuad()
-{
-	glGenVertexArrays(1, &gl.background_va);
-	glBindVertexArray(gl.background_va);
-	
-	glGenBuffers(1, &gl.background_vb);
-	glBindBuffer(GL_ARRAY_BUFFER, gl.background_vb);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_quad), g_vertex_quad, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glGenBuffers(1, &gl.background_uv);
-	glBindBuffer(GL_ARRAY_BUFFER, gl.background_uv);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_quad), g_uv_quad, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
-
-	glBindVertexArray(0);
-
-	return !GLfail("PrepareQuad");
-}
 
 #include "Shaders\RenderOGL_PSX_Shaders.inl"
 
@@ -270,9 +220,11 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 	show_vram = false;
 	fullscreen = false;
 
+	InitFramebuffer(640, 480);
+
 	SetWindowTextA(hWin, "Kurimpa");
 	SetWindowed(640,480);
-	WindowResize();
+	SetAspectRatio(4.0f/3.0f);
 
 	wglSwapIntervalEXT(usevsync ? 1 : 0);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -281,7 +233,7 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 	if(!PrepareDisplayQuad()) return false;
 
 	for(int i = 0; i < PROG_SIZE; i++)
-		Prog[i].LoadShaders(shader::main_vertex, shader::main_frag, shader::define[i]);
+		Prog[i].LoadShadersFromBuff(shader::main_vertex, shader::main_frag, shader::define[i]);
 
 	// This are constant for VRAM
 	Prog[PROG_VRAM].Use();
@@ -330,33 +282,38 @@ void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
 		return;
 	}
 
-	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, TEX_FORMAT, TEX_TYPE, psx.vram);
-	
+	BindFramebuffer();
+
 	if(show_vram)
 	{
 		Prog[PROG_VRAM].Use();
-		Prog[PROG_VRAM].SetWindowSize(GetWidth(), GetHeight());
+		glViewport(0, 0, 1024, 512);
 	}
 	else
 	{
 		u8 prog = is24bpp ? PROG_FB24 : PROG_FB16;
 
 		Prog[prog].Use();
-		Prog[prog].SetWindowSize(GetWidth(), GetHeight());
-		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width -1, psx.height -1);
+		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width, psx.height);
 		Prog[prog].SetDisplayOffset(psx.offx1, psx.offy1, psx.offx2, psx.offy2);
-	}
-	
-	glBindVertexArray(gl.background_va);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glBindVertexArray(0);
 
-	SwapBuffers(GetDeviceCtx());
+		glViewport(0, 0, psx.width, psx.height);
+	}
+
+	// Select and update VRAM texture
+	glBindTexture(GL_TEXTURE_RECTANGLE, gl.tVRAM);
+	glActiveTexture(GL_TEXTURE0);
+	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, 1024, 512, TEX_FORMAT, TEX_TYPE, psx.vram);
+
+	DrawDisplayQuad();
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+
+	EndFrame();
 }
 
 //---------------------------------------------------------------[SHADER]
 
-bool psxProgram::LoadShaders(const char *vbuff, const char *fbuff, const char* defs)
+bool psxProgram::LoadShadersFromBuff(const char *vbuff, const char *fbuff, const char* defs)
 {
 	OGLShader fragment, vertex;
 
@@ -371,8 +328,8 @@ bool psxProgram::LoadShaders(const char *vbuff, const char *fbuff, const char* d
 	AttachShader(vertex);
 	AttachShader(fragment);
 
-	BindAttribLocation(0, "vertexPosition_modelspace");
-	BindAttribLocation(1, "vertexUV");
+	BindAttribLocation(0, "QuadPos");
+	BindAttribLocation(1, "QuadUV");
 
 	Link();
 
@@ -380,7 +337,6 @@ bool psxProgram::LoadShaders(const char *vbuff, const char *fbuff, const char* d
 	fragment.Delete();
 
 	Sampler       = GetUniformLocation("Sampler");
-	WindowSize    = GetUniformLocation("WindowSize");
 	DisplaySize   = GetUniformLocation("DisplaySize");
 	DisplayOffset = GetUniformLocation("DisplayOffset");
 
@@ -389,11 +345,6 @@ bool psxProgram::LoadShaders(const char *vbuff, const char *fbuff, const char* d
 	//glBindSampler(0, Prog[i].SamplerID);
 
 	return true;
-}
-
-void psxProgram::SetWindowSize(float width, float height)
-{
-	glUniform2f(WindowSize, width, height);
 }
 
 void psxProgram::SetDisplaySize(int ox, int oy, int width, int height)
@@ -443,13 +394,13 @@ void RenderOGL_PSX::TakeVRAMshot()
 		{
 			u32 pos = x+ y * 1024;
 			u16 *vram = (u16*)psx.vram;
-			Pixel16 pix16(vram[pos]);
+			RGBA5551 pix16; pix16.RAW = vram[pos];
 
 			pos = (x + (511 - y) * 1024) * 3;
 
-			buffer[pos + 2] = (pix16.pix.R * 0xFF) / 0x1F;
-			buffer[pos + 1] = (pix16.pix.G * 0xFF) / 0x1F;
-			buffer[pos + 0] = (pix16.pix.B * 0xFF) / 0x1F;
+			buffer[pos + 2] = (pix16.R * 0xFF) / 0x1F;
+			buffer[pos + 1] = (pix16.G * 0xFF) / 0x1F;
+			buffer[pos + 0] = (pix16.B * 0xFF) / 0x1F;
 			//buffer[pos + 3] = pix16.pix.A ? 0xFF : 0x00;
 		}
 

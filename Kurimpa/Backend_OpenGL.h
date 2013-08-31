@@ -51,9 +51,18 @@ public:
 
 class Backend_OpenGL
 {
+	OGLProgram fbprog; // Framebuffer main shader
+	u32 fbid; // Framebuffer id
+	u32 fbcolor; // Framebuffer color texture
+	int fbwidth, fbheight; // Framebuffer resolution
+	u32 quadva, quadvb, quaduv; // Quad vertex array, buffer and tex coords
+	bool fbfiltering; // Linear or nearest
+
+	float aspectr; // Desired aspect ratio;
+	RECT viewport; // Viewport size, padding (aspect ratio)
 	RECT oldrect;
 	LONG oldstyle;
-	float width, height; // Screensize
+	int scwidth, scheight; // Screensize
 
 	HGLRC hTempGLCtx;   // Temporal OpenGL Context
 	HGLRC hRenderCtx;   // Rendering Context
@@ -61,17 +70,26 @@ class Backend_OpenGL
 	HWND hWindow;       // Window Handle
 
 protected:
+	void UpdateScreenAspect();
+	void SetAspectRatio(float ratio);
 	void SetScreensize(float width, float height);
 	void SetFullscreen();
 	void SetWindowed(int width, int height);
-	float GetWidth() { return width; };
-	float GetHeight() { return height; };
+	float GetWidth() { return (float)fbwidth; };
+	float GetHeight() { return (float)fbheight; };
 	HWND GetHWindow() { return hWindow; };
 	HDC  GetDeviceCtx() { return hDeviceCtx; };
 
-	OGLProgram LoadShaders(const char *vpath, const char *fpath, const char* defs);
-
 	bool CreateContext(HWND hWnd); // return error code
+	
+	bool PrepareDisplayQuad();
+	void DrawDisplayQuad();
+
+	void SetFBfiltering(bool linear);
+	bool InitFramebuffer(int width, int height);
+	void BindFramebuffer();
+	void SetFramebufferSize(int width, int height);
+	void EndFrame();
 
 	bool Init(HWND hWin);
 	void Shutdown();

@@ -131,6 +131,7 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 	case GP1_DISPLAY_START: 
 		DISP_START = data & 0x7FFFF;
 		DI.SetSTART(DISP_START);
+		render->SetDisplayOffset(DI.ox, DI.oy);
 		break;
 
 	case GP1_DISPLAY_HRANGE: 
@@ -147,6 +148,7 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 		data = ((data << 1) | ((data >> 6) & 1)) & 0x7F;
 		GPUSTAT = (GPUSTAT & ~(0x7F << 16)) | (data << 16);
 		DI.SetMode(GPUSTAT); // also "reversed flag" at bit 7
+		render->SetDisplayMode(DI.width, DI.height);
 		break;
 
 	case GP1_TEXTURE_DISABLE:
@@ -167,8 +169,6 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 	}
 	break;
 	}
-
-	u32 mocho = ReadStatus();
 }
 
 u32 PSXgpu::ReadData() // 0x1F801810 GPUREAD
@@ -218,8 +218,6 @@ void PSXgpu::LaceUpdate()
 	DI.UpdateCentering();
 
 	// This entire mess is for screen position
-	render->SetPSXorigin(DI.ox, DI.oy);
-	render->SetPSXsize(DI.width, DI.height);
 	render->SetPSXoffset(DI.cx, DI.rangeh, DI.cy, DI.oy + DI.rangev - 1);
 	render->Present(DI.is24bpp, !!(GPUSTAT & GPUSTAT_DISPDISABLE));
 
@@ -400,8 +398,7 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 
 void PSXgpu::WriteData(u32 data) // 0x1F801810 GP0
 {
-	CommandPacket write(data);
-	DebugPrint("[%08X] (%d) [%d]", write.RAW, gpcount, GPUMODE);
+	DebugPrint("[%08X] (%d) [%d]", data, gpcount, GPUMODE);
 
 	switch(GPUMODE)
 	{

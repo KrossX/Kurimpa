@@ -125,7 +125,7 @@ struct DISPINFO
 		isInterlaced = !!(REG & GPUSTAT_INTERLACED);
 
 		height = ((REG & GPUSTAT_VRES) && isInterlaced) ? 480 : 240;
-		scanlines = isPAL ? 264 : 224;
+		scanlines = isPAL ? 264 : 224; // PAL 255, 254 ??
 
 		changed = true;
 	}
