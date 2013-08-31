@@ -294,9 +294,8 @@ void RenderOGL_PSX::Present(bool is24bpp, bool disabled)
 		u8 prog = is24bpp ? PROG_FB24 : PROG_FB16;
 
 		Prog[prog].Use();
-		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width, psx.height);
+		Prog[prog].SetDisplaySize(psx.ox, psx.oy, psx.width - 1, psx.height - 1);
 		Prog[prog].SetDisplayOffset(psx.offx1, psx.offy1, psx.offx2, psx.offy2);
-
 		glViewport(0, 0, psx.width, psx.height);
 	}
 

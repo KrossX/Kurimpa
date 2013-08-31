@@ -218,7 +218,7 @@ void PSXgpu::LaceUpdate()
 	DI.UpdateCentering();
 
 	// This entire mess is for screen position
-	render->SetPSXoffset(DI.cx, DI.rangeh, DI.cy, DI.oy + DI.rangev - 1);
+	render->SetPSXoffset(DI.cx, DI.ox + DI.rangeh - 1, DI.cy, DI.oy + DI.rangev - 1);
 	render->Present(DI.is24bpp, !!(GPUSTAT & GPUSTAT_DISPDISABLE));
 
 	if( DI.height == 480)

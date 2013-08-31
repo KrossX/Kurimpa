@@ -31,7 +31,7 @@ namespace shader
 		"#ifdef VIEW_VRAM\n" \
 		"	pos_vram = newUV * vec2(1024.0, 512.0) + vec2(0.5, 0.5);\n" \
 		"#else\n" \
-		"	pos_rect = newUV * vec2(DisplaySize.zw) + vec2(DisplaySize.xy) + vec2(0.5, 0.5);\n" \
+		"	pos_rect = newUV * vec2(DisplaySize.zw) + vec2(DisplaySize.xy) + vec2(0.5, 0.5) - vec2(DisplayOffset.xy);\n" \
 		"#endif\n" \
 		"}\n";
 
@@ -118,6 +118,14 @@ namespace shader
 		"#ifdef VIEW_VRAM\n" \
 		"	color = GetTexel16(pos_vram);\n" \
 		"#else\n" \
+
+		"	if(pos_rect.y < float(DisplaySize.y) || pos_rect.y > float(DisplayOffset.w) ||\n" \
+		"	   pos_rect.x < float(DisplaySize.x) || pos_rect.x > float(DisplayOffset.z))\n" \
+		"	{\n" \
+		"		color = vec3(0.0, 0.0, 0.0);\n" \
+		"		return;\n" \
+		"	}\n" \
+
 		"	#ifdef COLOR24\n" \
 		"	color = GetTexel24(pos_rect);\n" \
 		"	#else\n" \
