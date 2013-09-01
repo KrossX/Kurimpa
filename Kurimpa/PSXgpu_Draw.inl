@@ -227,6 +227,8 @@ void PSXgpu::SetPixel(u32 color, s16 x, s16 y, u16 texel = 0)
 	if(doBlend)
 		frontcolor = Blend(backcolor, frontcolor);
 
+	if(!DI.is480i) SetDrawLine(y%2);
+
 	VRAM.HALF2[y][x] = doMask ? frontcolor | 0x8000 : frontcolor;
 }
 
@@ -258,6 +260,7 @@ u16 PSXgpu::GetTexel(u8 tx, u8 ty)
 		break;
 
 	case 2: // 15 bits
+	case 3: // Reserved... also 15 bits?
 		color.U16 = TW.PAGE[(ty << 10) + tx];
 		break;
 	}
@@ -466,6 +469,7 @@ void PSXgpu::RasterPoly4()
 inline void PSXgpu::DrawStart(u32 data)
 {
 	SetReadyCMD(0);
+	SetReadyDMA(0);
 	vertex[0].c = data & 0xFFFFFF;
 	DC = (data >> 24) & 0xFF;
 }

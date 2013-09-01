@@ -22,6 +22,7 @@ void PSXgpu::Transfer_VRAM_VRAM(u32 data)
 	case 0:
 		DebugFunc();
 		SetReadyCMD(0);
+		SetReadyDMA(0);
 		gpsize = 3;
 		GPUMODE = GPUMODE_TRANSFER_VRAM_VRAM;
 		break;
@@ -67,6 +68,7 @@ void PSXgpu::Transfer_CPU_VRAM(u32 data)
 	case 0: 
 		DebugFunc();
 		SetReadyCMD(0);
+		SetReadyDMA(1); // Set DMA request? 
 		GPUMODE = GPUMODE_TRANSFER_CPU_VRAM;
 		break;
 
@@ -114,7 +116,8 @@ void PSXgpu::Transfer_VRAM_CPU(u32 data)
 	{
 	case 0:
 		DebugFunc();
-		SetReadyVRAMtoCPU(1);
+		SetReadyCMD(0);
+		SetReadyDMA(0);
 		GPUMODE = GPUMODE_TRANSFER_VRAM_CPU;
 		break;
 
@@ -125,6 +128,7 @@ void PSXgpu::Transfer_VRAM_CPU(u32 data)
 	case 2:
 		TR.SetSize(data);
 		gpsize = TR.GetSize();
+		SetReadyVRAMtoCPU(1);
 		x = y = 0;
 		break;
 
@@ -142,7 +146,11 @@ void PSXgpu::Transfer_VRAM_CPU(u32 data)
 			}
 
 			GPUREAD = TR.dst.U32;
-			if(gpcount >= gpsize) SetReady();
+			if(gpcount >= gpsize)
+			{
+				SetReadyVRAMtoCPU(0);
+				SetReady();
+			}
 		}
 		break;
 	}

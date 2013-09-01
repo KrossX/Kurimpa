@@ -91,6 +91,7 @@ struct DISPINFO
 	s32 cx, cy; // offset XY
 	s32 width, height;
 
+	bool is480i;
 	bool isPAL;
 	bool isInterlaced; 
 	bool is24bpp; // 15b or 24b color mode
@@ -126,6 +127,7 @@ struct DISPINFO
 
 		height = ((REG & GPUSTAT_VRES) && isInterlaced) ? 480 : 240;
 		scanlines = isPAL ? 264 : 224; // PAL 255, 254 ??
+		is480i = height == 480;
 
 		changed = true;
 	}
@@ -223,6 +225,7 @@ struct PSXgpu
 	void SetReadyVRAMtoCPU(u8 bit) { GPUSTAT &= ~GPUSTAT_READYVRAMCPU; GPUSTAT |= (bit&1) << 27; }
 	void SetReadyDMA(u8 bit) { GPUSTAT &= ~GPUSTAT_READYDMA; GPUSTAT |= (bit&1) << 28; }
 	void SetDMAdirection(u8 bit2)  { GPUSTAT &= ~GPUSTAT_DMADIR; GPUSTAT |= (bit2&3) << 29; }
+	void SetDrawLine(u8 bit) { GPUSTAT &= ~GPUSTAT_DRAWLINE; GPUSTAT |= (bit&1) << 31; }
 
 	bool doMaskCheck(u16 &x, u16 &y) { return (GPUSTAT & GPUSTAT_MASKCHECK) && (VRAM.HALF2[y][x] & 0x8000); }
 	bool doMaskCheck(u16 &pix) { return (GPUSTAT & GPUSTAT_MASKCHECK) && (pix & 0x8000); }
@@ -232,7 +235,8 @@ struct PSXgpu
 
 	void SetReady()
 	{
-		GPUSTAT |= GPUSTAT_READYCMD;
+		SetReadyCMD(1);
+		SetReadyDMA(1);
 		gpcount = 0;
 		GPUMODE = GPUMODE_COMMAND;
 	}

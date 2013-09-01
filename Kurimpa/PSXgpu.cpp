@@ -39,22 +39,26 @@ int PSXgpu::Init()
 void PSXgpu::Reset()
 {
 	DebugFunc();
+	GPUSTAT = 0x2000; // Always set
 
-	GPUSTAT = 0x14802000;// | (GPUSTAT & 0x200);
-	DI.SetMode(GPUSTAT);
+	WriteStatus(0x01000000);
+	WriteStatus(0x02000000);
+	WriteStatus(0x03000001);
+	WriteStatus(0x04000000);
+	WriteStatus(0x05000000);
+	WriteStatus(0x06C00200);
+	WriteStatus(0x07040010);
+	WriteStatus(0x08000000);
+	
+	Command(0xE1000000);
+	Command(0xE2000000);
+	Command(0xE3000000);
+	Command(0xE4000000);
+	Command(0xE5000000);
+	Command(0xE6000000);
 
-	DISP_START  = 0;
-	DISP_RANGEH = 0xC00200;
-	DISP_RANGEV = 0x040010;
-
-	DI.SetSTART (DISP_START);
-	DI.SetHRANGE(DISP_RANGEH);
-	DI.SetVRANGE(DISP_RANGEV);
-
-	TEXTURE_WINDOW = 0;
-	DRAW_AREA_TL   = 0;
-	DRAW_AREA_BR   = 0;
-	DRAW_OFFSET    = 0;
+	SetReadyCMD(1);
+	SetReadyDMA(1);
 }
 
 int PSXgpu::Shutdown()
@@ -99,6 +103,7 @@ void PSXgpu::TakeSnapshot()
 u32 PSXgpu::ReadStatus() // 0x1F801814 GPUSTAT
 {
 	DebugPrint("[%08X]", GPUSTAT);
+
 	return GPUSTAT;
 }
 
@@ -124,14 +129,22 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 		SetDisplayDisable(data&1);
 		break;
 
-	case GP1_DMA_DIR_REQ: 
+	case GP1_DMA_DIR_REQ:
 		SetDMAdirection(data&3);
+
+		switch(data&3)
+		{
+		case 0: SetDMA(0); break; // Always zero (0)
+		case 1: SetDMA(1); break; // FIFO State  (0=Full, 1=Not Full)
+		case 2: SetDMA(GPUSTAT & GPUSTAT_READYDMA ? 1 : 0); break;
+		case 3: SetDMA(GPUSTAT & GPUSTAT_READYVRAMCPU ? 1 : 0); break;
+		}
 		break;
 
 	case GP1_DISPLAY_START: 
 		DISP_START = data & 0x7FFFF;
 		DI.SetSTART(DISP_START);
-		render->SetDisplayOffset(DI.ox, DI.oy);
+		if(render) render->SetDisplayOffset(DI.ox, DI.oy);
 		break;
 
 	case GP1_DISPLAY_HRANGE: 
@@ -148,7 +161,7 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 		data = ((data << 1) | ((data >> 6) & 1)) & 0x7F;
 		GPUSTAT = (GPUSTAT & ~(0x7F << 16)) | (data << 16);
 		DI.SetMode(GPUSTAT); // also "reversed flag" at bit 7
-		render->SetDisplayMode(DI.width, DI.height);
+		if(render) render->SetDisplayMode(DI.width, DI.height);
 		break;
 
 	case GP1_TEXTURE_DISABLE:
@@ -193,17 +206,17 @@ void PSXgpu::LaceUpdate()
 	DWORD newtime = GetTickCount();
 	DWORD diff = newtime - oldtime;
 
-	if(diff > 500)
+	if(diff > 100)
 	{
 		char buff[256];
 		memset(buff, 0, sizeof(buff));
 
 		float time = (float)(diff) / 1000.0f;
 
-		sprintf_s(buff, "Kurimpa: %s %d%s (%d,%d) | FPS: %1.2f", 
+		sprintf_s(buff, "Kurimpa: %s %d%s (%d,%d) (%08X) | FPS: %1.2f", 
 			DI.isPAL ? "PAL" : "NTSC", 
 			DI.height, DI.isInterlaced? "i" : "p", 
-			DI.width, DI.height,
+			DI.width, DI.height, GPUSTAT,
 			//DI.x1, DI.x2, DI.y1, DI.y2,
 			framecount / time);
 
@@ -221,7 +234,7 @@ void PSXgpu::LaceUpdate()
 	render->SetPSXoffset(DI.cx, DI.ox + DI.rangeh - 1, DI.cy, DI.oy + DI.rangev - 1);
 	render->Present(DI.is24bpp, !!(GPUSTAT & GPUSTAT_DISPDISABLE));
 
-	if( DI.height == 480)
+	if(DI.is480i)
 		GPUSTAT ^=  GPUSTAT_DRAWLINE;
 	else
 		GPUSTAT &= ~GPUSTAT_DRAWLINE; // VBlank
@@ -450,7 +463,6 @@ void PSXgpu::ReadDataMem(u32 * pMem, int iSize)
 	DebugPrint("(%d)", iSize);
 
 	for(int i = 0; i < iSize; i++) pMem[i] = ReadData();
-	SetReady();
 }
 
 void PSXgpu::WriteDataMem(u32 * pMem, int iSize)
@@ -458,7 +470,6 @@ void PSXgpu::WriteDataMem(u32 * pMem, int iSize)
 	DebugPrint("(%d)", iSize);
 	
 	for(int i = 0; i < iSize; i++) WriteData(pMem[i]);
-	SetReady();
 }
 
 void PSXgpu::SetMode(u32 data)
