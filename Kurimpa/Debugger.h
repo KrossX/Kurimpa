@@ -17,27 +17,23 @@
 
 #pragma once
 
+bool DebugOpen();
+void DebugClose();
+
+void _DebugFunc(const char* func);
+void _DebugPrint(const char* func, const char* fmt, ...);
+void _DebugShader(const char* message, int length);
 
 #define KDEBUG 0
 
 #if KDEBUG > 0
 
-	bool _DebugOpen();
-	void _DebugClose();
-	void _DebugFunc(const char* func);
-	void _DebugPrint(const char* func, const char* fmt, ...);
-	void _DebugShader(const char* message, int length);
-
-	#define DebugOpen()		_DebugOpen()
-	#define DebugClose()	_DebugClose()
 	#define DebugPrint(...)	_DebugPrint(__FUNCTION__, __VA_ARGS__)
 	#define DebugFunc()		_DebugFunc(__FUNCTION__)
 	#define DebugShader		_DebugShader
 
 #else
 
-	#define DebugOpen()
-	#define DebugClose()
 	#define DebugPrint(...)
 	#define DebugFunc()
 	#define DebugShader(...)

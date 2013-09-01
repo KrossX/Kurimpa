@@ -20,19 +20,17 @@
 FILE *logfile = NULL;
 FILE *shaderlog = NULL;
 
-bool _DebugOpen()
+bool DebugOpen()
 {
-	shaderlog = fopen("kurimpa.shaderlog", "w");
-
 	logfile = fopen("kurimpa.log", "w");
 	if(logfile) fprintf(logfile, "DebugOpen\n");
-
-	return !!logfile;
+	return logfile != NULL;
 }
 
-void _DebugClose()
+void DebugClose()
 {
 	if(shaderlog) fclose(shaderlog);
+	shaderlog = NULL;
 
 	if(logfile) fprintf(logfile, "DebugClose\n");
 	if(logfile) fclose(logfile);
@@ -41,6 +39,7 @@ void _DebugClose()
 
 void _DebugShader(const char* message, int length)
 {
+	if(!shaderlog) shaderlog = fopen("kurimpa.shaderlog", "w");
 	if(!shaderlog) return;
 
 	fwrite(message, 1, length - 1, shaderlog);
@@ -49,8 +48,9 @@ void _DebugShader(const char* message, int length)
 
 void _DebugFunc(const char* func)
 {
-	if(!logfile && !_DebugOpen()) return;
-	//if(!GetAsyncKeyState(VK_F9)) return;
+	if(!logfile) DebugOpen();
+	if(!logfile) return;
+	//if(!GetAsyncKeyState(VK_INSERT)) return;
 
 	fprintf(logfile, "%s\n", func);
 	fflush(logfile);
@@ -58,8 +58,9 @@ void _DebugFunc(const char* func)
 
 void _DebugPrint(const char* func, const char* fmt, ...)
 {
-	if(!logfile && !_DebugOpen()) return;
-	//if(!GetAsyncKeyState(VK_F9)) return;
+	if(!logfile) DebugOpen();
+	if(!logfile) return;
+	//if(!GetAsyncKeyState(VK_INSERT)) return;
 
 	va_list args;
 	

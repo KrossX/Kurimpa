@@ -26,7 +26,6 @@ BOOL APIENTRY DllMain(HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 	switch(dwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		DebugOpen();
 		break;
 
 	case DLL_PROCESS_DETACH:
