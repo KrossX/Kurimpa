@@ -1068,21 +1068,23 @@ void PSXgpu::DrawFill(u32 data)
 	case 2:
 		{
 			TR.size.U32 = data;
-			if(!TR.size.U16[0] || !TR.size.U16[1]) return;
 
-			TR.size.U16[0]  = ((TR.size.U16[0] & 0x3FF) + 0x0F) & ~0x0F;
-			TR.size.U16[1] &= 0x1FF;
+			if(TR.size.U16[0] && TR.size.U16[1])
+			{
+				TR.size.U16[0]  = ((TR.size.U16[0] & 0x3FF) + 0x0F) & ~0x0F;
+				TR.size.U16[1] &= 0x1FF;
 
-			const u16 xmax =  TR.start.U16[0] + TR.size.U16[0];
-			const u16 ymax =  TR.start.U16[1] + TR.size.U16[1];
+				const u16 xmax =  TR.start.U16[0] + TR.size.U16[0];
+				const u16 ymax =  TR.start.U16[1] + TR.size.U16[1];
 
-			const u16 xmin = TR.start.U16[0];
-			const u16 ymin = TR.start.U16[1];
+				const u16 xmin = TR.start.U16[0];
+				const u16 ymin = TR.start.U16[1];
 
 
-			for(u16 y = ymin; y < ymax; y++)
-			for(u16 x = xmin; x < xmax; x++)
-				VRAM.HALF2[y][x] = color;
+				for(u16 y = ymin; y < ymax; y++)
+				for(u16 x = xmin; x < xmax; x++)
+					VRAM.HALF2[y][x] = color;
+			}
 
 			SetReady();
 		}
