@@ -17,14 +17,13 @@
 
 #pragma once
 
-bool DebugOpen();
 void DebugClose();
 
 void _DebugFunc(const char* func);
 void _DebugPrint(const char* func, const char* fmt, ...);
 void _DebugShader(const char* message, int length);
 
-#define KDEBUG 0
+#define KDEBUG 1
 
 #if KDEBUG > 0
 
