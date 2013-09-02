@@ -23,7 +23,7 @@ void _DebugFunc(const char* func);
 void _DebugPrint(const char* func, const char* fmt, ...);
 void _DebugShader(const char* message, int length);
 
-#define KDEBUG 1
+#define KDEBUG 0
 
 #if KDEBUG > 0
 

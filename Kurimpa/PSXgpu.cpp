@@ -490,6 +490,56 @@ u32 PSXgpu::GetMode()
 	return 0;
 }
 
+#if 1
+// From PEOPS
+// TODO: Understand this someday.
+
+unsigned long lUsedAddr[3];
+
+__inline BOOL CheckForEndlessLoop(unsigned long laddr)
+{
+ if(laddr==lUsedAddr[1]) return TRUE;
+ if(laddr==lUsedAddr[2]) return TRUE;
+
+ if(laddr<lUsedAddr[0]) lUsedAddr[1]=laddr;
+ else lUsedAddr[2]=laddr;
+ lUsedAddr[0]=laddr;
+ return FALSE;
+}
+
+int PSXgpu::DmaChain(u32 * baseAddrL, u32 addr)
+{
+ unsigned long dmaMem;
+ unsigned char * baseAddrB;
+ short count;unsigned int DMACommandCounter = 0;
+
+ lUsedAddr[0]=lUsedAddr[1]=lUsedAddr[2]=0xffffff;
+
+ baseAddrB = (unsigned char*) baseAddrL;
+
+ do
+  {
+   if(DMACommandCounter++ > 2000000) break;
+   if(CheckForEndlessLoop(addr)) break;
+
+   count = baseAddrB[addr+3];
+
+   dmaMem=addr+4;
+
+   
+   if(count>0)
+   {
+DebugPrint("#%d [%02X|%06X]", DMACommandCounter, count, baseAddrL[dmaMem>>2]);
+WriteDataMem(&baseAddrL[dmaMem>>2],count);
+   }
+
+   addr = baseAddrL[addr>>2]&0xffffff;
+  }
+ while (addr != 0xffffff);
+
+ return 0;
+}
+#else
 int PSXgpu::DmaChain(u32 *base, u32 addr)
 {
 	GPUSTAT.READYDMA = 0;
@@ -512,7 +562,7 @@ int PSXgpu::DmaChain(u32 *base, u32 addr)
 
 	return 0;
 }
-
+#endif
 
 void PSXgpu::SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 {
