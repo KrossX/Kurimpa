@@ -279,6 +279,9 @@ void PSXgpu::RasterLine()
 	int shortLen = vertex[1].y - vertex[0].y;
 	int longLen = vertex[1].x - vertex[0].x;
 
+	if(!shortLen) shortLen = 1;
+	if(!longLen) longLen = 1;
+
 	if (abs(shortLen)>abs(longLen))
 	{
 		int swap=shortLen;
@@ -339,6 +342,9 @@ void PSXgpu::RasterPoly3()
 	if((maxY - minY) > 511) return;
 
 	DA.PolyAreaClip(minX, maxX, minY, maxY);
+
+	if(minX == maxX) maxX++;
+	if(minY == maxY) maxY++;
 
 	float cross = crossProduct(vs2, vs1);
 	if(!cross) return;
@@ -468,8 +474,8 @@ void PSXgpu::RasterPoly4()
 
 inline void PSXgpu::DrawStart(u32 data)
 {
-	SetReadyCMD(0);
-	SetReadyDMA(0);
+	//SetReadyCMD(0);
+	//SetReadyDMA(0);
 	vertex[0].c = data & 0xFFFFFF;
 	DC = (data >> 24) & 0xFF;
 }
@@ -815,6 +821,9 @@ void PSXgpu::DrawRect0(u32 data)
 			xmin = vertex[0].x; xmax = xmin + vertex[1].x;
 			ymin = vertex[0].y; ymax = ymin + vertex[1].y;
 
+			if(xmin == xmax) xmax++;
+			if(ymin == ymax) ymax++;
+
 			for(y = ymin; y < ymax; y++)
 			for(x = xmin; x < xmax; x++)
 				SetPixel(vertex[0].c, x, y);
@@ -851,6 +860,9 @@ void PSXgpu::DrawRect0T(u32 data)
 
 			xmin = vertex[0].x; xmax = xmin + vertex[1].x;
 			ymin = vertex[0].y; ymax = ymin + vertex[1].y;
+
+			if(xmin == xmax) xmax++;
+			if(ymin == ymax) ymax++;
 
 			for(y = ymin, ty = vertex[0].v; y < ymax; y++, ty++)
 			for(x = xmin, tx = vertex[0].u; x < xmax; x++, tx++)
@@ -1054,7 +1066,7 @@ void PSXgpu::DrawFill(u32 data)
 	{
 	case 0:
 		color = GetPix16(data);
-		SetReadyCMD(0);
+		//SetReadyCMD(0);
 		gpsize = 2;
 		GPUMODE = GPUMODE_FILL;
 		break;

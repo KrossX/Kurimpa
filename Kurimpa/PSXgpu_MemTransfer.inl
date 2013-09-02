@@ -21,8 +21,8 @@ void PSXgpu::Transfer_VRAM_VRAM(u32 data)
 	{
 	case 0:
 		DebugFunc();
-		SetReadyCMD(0);
-		SetReadyDMA(0);
+		//SetReadyCMD(0);
+		//SetReadyDMA(0);
 		gpsize = 3;
 		GPUMODE = GPUMODE_TRANSFER_VRAM_VRAM;
 		break;
@@ -67,8 +67,8 @@ void PSXgpu::Transfer_CPU_VRAM(u32 data)
 	{
 	case 0: 
 		DebugFunc();
-		SetReadyCMD(0);
-		SetReadyDMA(1); // Set DMA request? 
+		//SetReadyCMD(0);
+		//SetReadyDMA(1); // Set DMA request? 
 		GPUMODE = GPUMODE_TRANSFER_CPU_VRAM;
 		break;
 
@@ -116,8 +116,8 @@ void PSXgpu::Transfer_VRAM_CPU(u32 data)
 	{
 	case 0:
 		DebugFunc();
-		SetReadyCMD(0);
-		SetReadyDMA(0);
+		//SetReadyCMD(0);
+		//SetReadyDMA(1);
 		GPUMODE = GPUMODE_TRANSFER_VRAM_CPU;
 		break;
 

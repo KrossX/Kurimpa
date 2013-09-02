@@ -235,8 +235,8 @@ struct PSXgpu
 
 	void SetReady()
 	{
-		SetReadyCMD(1);
-		SetReadyDMA(1);
+		//SetReadyCMD(1);
+		//SetReadyDMA(1);
 		gpcount = 0;
 		GPUMODE = GPUMODE_COMMAND;
 	}

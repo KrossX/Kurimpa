@@ -69,9 +69,9 @@ enum GPUSTAT
 	GPUSTAT_IRQ1        = 1 << 24, // 24 (0=Off, 1=IRQ)
 	GPUSTAT_DMA         = 1 << 25, // 25 DMA / Data Request
 
-	GPUSTAT_READYCMD    = 1 << 26, // 26 Ready to receive command (0=No, 1=Ready)
+	GPUSTAT_READYCMD    = 1 << 26, // 26 Ready to receive command (0=No, 1=Ready) // Wait finish drawing primites (1) || isDrawing wait
 	GPUSTAT_READYVRAMCPU= 1 << 27, // 27 (0=No, 1=Ready)
-	GPUSTAT_READYDMA    = 1 << 28, // 28 Ready to receive DMA Block (0=No, 1=Ready)
+	GPUSTAT_READYDMA    = 1 << 28, // 28 Ready to receive DMA Block (0=No, 1=Ready) // Wait for gpu to be free (1)
 	GPUSTAT_DMADIR      = 3 << 29, // 29(0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)
 	GPUSTAT_DRAWLINE    = 1 << 31, // 31(0=Even or Vblank, 1=Odd)
 };
