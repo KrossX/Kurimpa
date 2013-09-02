@@ -163,9 +163,7 @@ inline u16 PSXgpu::Blend(u16 &back, u16 &front)
 	Fg = (front >> 5) & 0x1F;
 	Fb = (front >> 10) & 0x1F;
 
-	u8 mode = ((GPUSTAT & GPUSTAT_BLENDEQ) >> 5) & 3;
-
-	switch(mode)
+	switch(GPUSTAT.BLENDEQ)
 	{
 	case 0:
 		Fr = (Br + Fr) >> 1;
@@ -212,11 +210,11 @@ void PSXgpu::SetPixel(u32 color, s16 x, s16 y, u16 texel = 0)
 	bool isTextured = !!(DC & DCMD_TEXTURED);
 	bool isRect = (DC & DCMD_TYPE) == 0x60; // 0x20 poly, 0x40 line, 0x60 rect
 	bool isGouraud = !!(DC & DCMD_GOURAUD);
-	bool isMaskForced = !!(GPUSTAT & GPUSTAT_MASKSET);
+	bool isMaskForced = !!GPUSTAT.MASKSET;
 
 	bool doModulate = !(DC & DCMD_ENVREPLACE);
 	bool doBlend = !!(DC & DCMD_BLENDENABLED) && (!isTextured || (isTextured && texMasked));
-	bool doDither = !!(GPUSTAT & GPUSTAT_DITHER) && (!isRect && isGouraud);
+	bool doDither = !!GPUSTAT.DITHER && (!isRect && isGouraud);
 	bool doMask = isMaskForced || texMasked;
 	
 	if(isTextured)
@@ -227,8 +225,6 @@ void PSXgpu::SetPixel(u32 color, s16 x, s16 y, u16 texel = 0)
 	if(doBlend)
 		frontcolor = Blend(backcolor, frontcolor);
 
-	if(!DI.is480i) SetDrawLine(y%2);
-
 	VRAM.HALF2[y][x] = doMask ? frontcolor | 0x8000 : frontcolor;
 }
 
@@ -238,9 +234,7 @@ u16 PSXgpu::GetTexel(u8 tx, u8 ty)
 
 	TW.ApplyMaskOffset(tx, ty);
 
-	u8 colormode = ((GPUSTAT & GPUSTAT_PAGECOL) >> 7) & 3;
-
-	switch(colormode)
+	switch(GPUSTAT.PAGECOL)
 	{
 	case 0: // 4 bits
 		color.U16 = TW.PAGE[(ty << 10) + (tx >> 2)];
@@ -515,7 +509,7 @@ void PSXgpu::DrawPoly3T(u32 data)
 
 	case 3: vertex[1].SetV(data); break;
 	case 4: vertex[1].SetT(data);
-		SetTEXPAGE(vertex[1].tex);
+		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -566,7 +560,7 @@ void PSXgpu::DrawPoly3ST(u32 data)
 	case 3: vertex[1].c = data; break;
 	case 4: vertex[1].SetV(data); break;
 	case 5: vertex[1].SetT(data);
-		SetTEXPAGE(vertex[1].tex);
+		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -616,7 +610,7 @@ void PSXgpu::DrawPoly4T(u32 data)
 
 	case 3: vertex[1].SetV(data); break;
 	case 4: vertex[1].SetT(data);
-		SetTEXPAGE(vertex[1].tex);
+		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -671,7 +665,7 @@ void PSXgpu::DrawPoly4ST(u32 data)
 	case 3: vertex[1].c = data; break;
 	case 4: vertex[1].SetV(data); break;
 	case 5: vertex[1].SetT(data);
-		SetTEXPAGE(vertex[1].tex);
+		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 

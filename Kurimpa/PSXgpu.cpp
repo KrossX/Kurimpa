@@ -39,7 +39,7 @@ int PSXgpu::Init()
 void PSXgpu::Reset()
 {
 	DebugFunc();
-	GPUSTAT = 0x2000; // Always set
+	GPUSTAT.RESERVED = 1; // Always set
 
 	WriteStatus(0x01000000);
 	WriteStatus(0x02000000);
@@ -57,8 +57,8 @@ void PSXgpu::Reset()
 	Command(0xE5000000);
 	Command(0xE6000000);
 
-	SetReadyCMD(1);
-	SetReadyDMA(1);
+	GPUSTAT.READYCMD = 1;
+	GPUSTAT.READYDMA = 1;
 }
 
 int PSXgpu::Shutdown()
@@ -102,9 +102,10 @@ void PSXgpu::TakeSnapshot()
 
 u32 PSXgpu::ReadStatus() // 0x1F801814 GPUSTAT
 {
-	DebugPrint("[%08X]", GPUSTAT);
-
-	return GPUSTAT;
+	if(!DI.is480i) GPUSTAT.DRAWLINE ^= 1;
+	u32 GPUSTATRAW = GPUSTAT.GetU32();
+	DebugPrint("[%08X]", GPUSTATRAW);
+	return GPUSTATRAW;
 }
 
 void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
@@ -114,58 +115,63 @@ void PSXgpu::WriteStatus(u32 data) // 0x1F801814 GP1
 
 	switch(stat.command & 0x3F)
 	{
-	case GP1_RESET_GPU: 
+	case GP1_RESET_GPU:
 		Reset();
 		break;
 
-	case GP1_RESET_CBUFF: 
+	case GP1_RESET_CBUFF:
 		break;
 
-	case GP1_ACK_IRQ: 
-		SetIRQ(0);
+	case GP1_ACK_IRQ:
+		GPUSTAT.IRQ1 = 0;
 		break;
 
 	case GP1_DISPLAY_DISABLE:
-		SetDisplayDisable(data&1);
+		GPUSTAT.DISPDISABLE = data&1;
 		break;
 
 	case GP1_DMA_DIR_REQ:
-		SetDMAdirection(data&3);
+		GPUSTAT.DMADIR = data&3;
 
 		switch(data&3)
 		{
-		case 0: SetDMA(0); break; // Always zero (0)
-		case 1: SetDMA(1); break; // FIFO State  (0=Full, 1=Not Full)
-		case 2: SetDMA(GPUSTAT & GPUSTAT_READYDMA ? 1 : 0); break;
-		case 3: SetDMA(GPUSTAT & GPUSTAT_READYVRAMCPU ? 1 : 0); break;
+		case 0: GPUSTAT.DMA = 0; break; // Always zero (0)
+		case 1: GPUSTAT.DMA = 1; break; // FIFO State  (0=Full, 1=Not Full)
+		case 2: GPUSTAT.DMA = GPUSTAT.READYDMA; break;
+		case 3: GPUSTAT.DMA = GPUSTAT.READYVRAMCPU; break;
 		}
 		break;
 
-	case GP1_DISPLAY_START: 
+	case GP1_DISPLAY_START:
 		DISP_START = data & 0x7FFFF;
 		DI.SetSTART(DISP_START);
 		if(render) render->SetDisplayOffset(DI.ox, DI.oy);
 		break;
 
-	case GP1_DISPLAY_HRANGE: 
+	case GP1_DISPLAY_HRANGE:
 		DISP_RANGEH = data & 0xFFFFFF;
 		DI.SetHRANGE(DISP_RANGEH);
 		break;
 
-	case GP1_DISPLAY_VRANGE: 
+	case GP1_DISPLAY_VRANGE:
 		DISP_RANGEV = data & 0xFFFFF;
 		DI.SetVRANGE(DISP_RANGEV);
 		break;
 
-	case GP1_DISPLAY_MODE: 
-		data = ((data << 1) | ((data >> 6) & 1)) & 0x7F;
-		GPUSTAT = (GPUSTAT & ~(0x7F << 16)) | (data << 16);
-		DI.SetMode(GPUSTAT); // also "reversed flag" at bit 7
+	case GP1_DISPLAY_MODE:
+		GPUSTAT.HRES1      =  data&3;
+		GPUSTAT.VRES       = (data>>2)&1;
+		GPUSTAT.VMODE      = (data>>3)&1;
+		GPUSTAT.DISPCOLOR  = (data>>4)&1;
+		GPUSTAT.INTERLACED = (data>>5)&1;
+		GPUSTAT.HRES2      = (data>>6)&1;
+		GPUSTAT.REVERSED   = (data>>7)&1;
+		DI.SetMode(GPUSTAT);
 		if(render) render->SetDisplayMode(DI.width, DI.height);
 		break;
 
 	case GP1_TEXTURE_DISABLE:
-		//SetTextureDisable(data&1);
+		GPUSTAT.TEXDISABLE = data&1;
 		break;
 
 	default: if(stat.command & 0x10) // 0x10 to 0x1F
@@ -213,10 +219,10 @@ void PSXgpu::LaceUpdate()
 
 		float time = (float)(diff) / 1000.0f;
 
-		sprintf_s(buff, "Kurimpa: %s %d%s (%d,%d) (%08X) | FPS: %1.2f", 
+		sprintf_s(buff, "Kurimpa: %s %d%s (%d,%d) | FPS: %1.2f", 
 			DI.isPAL ? "PAL" : "NTSC", 
 			DI.height, DI.isInterlaced? "i" : "p", 
-			DI.width, DI.height, GPUSTAT,
+			DI.width, DI.height,
 			//DI.x1, DI.x2, DI.y1, DI.y2,
 			framecount / time);
 
@@ -232,12 +238,10 @@ void PSXgpu::LaceUpdate()
 
 	// This entire mess is for screen position
 	render->SetPSXoffset(DI.cx, DI.ox + DI.rangeh - 1, DI.cy, DI.oy + DI.rangev - 1);
-	render->Present(DI.is24bpp, !!(GPUSTAT & GPUSTAT_DISPDISABLE));
+	render->Present(DI.is24bpp, !!GPUSTAT.DISPDISABLE);
 
-	if(DI.is480i)
-		GPUSTAT ^=  GPUSTAT_DRAWLINE;
-	else
-		GPUSTAT &= ~GPUSTAT_DRAWLINE; // VBlank
+	if(DI.is480i) GPUSTAT.DRAWLINE ^= 1;
+	else          GPUSTAT.DRAWLINE  = 0; // VBlank
 }
 
 
@@ -281,7 +285,7 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 		//case 0x1D: break;
 		//case 0x1E: break;
 		case 0x1F:
-			SetIRQ(1);
+			GPUSTAT.IRQ1 = 1;
 			MessageBoxA(NULL, "IRQ?", "Really?", MB_OK);
 			break;
 
@@ -345,12 +349,15 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 		//case 0xE0: break;
 
 		case 0xE1:
-			GPUSTAT &= ~0x7FF;
-			GPUSTAT |= write.parameter & 0x7FF;
-
-			SetTextureDisable((write.parameter >> 11) & 1);
-			// 12 flip X
-			// 13 flip Y
+			GPUSTAT.TPAGEX      =  data&0xF;
+			GPUSTAT.TPAGEY      = (data>>4)&1;
+			GPUSTAT.BLENDEQ     = (data>>5)&3;
+			GPUSTAT.PAGECOL     = (data>>7)&3;
+			GPUSTAT.DITHER      = (data>>9)&1;
+			GPUSTAT.DRAWDISPLAY = (data>>10)&1;
+			GPUSTAT.TXPDISABLE  = (data>>11)&1;
+			GPUSTAT.RECT_FLIPX  = (data>>12)&1;
+			GPUSTAT.RECT_FLIPY  = (data>>13)&1;
 			break;
 
 		case 0xE2:
@@ -374,7 +381,8 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 			break;
 
 		case 0xE6:
-			SetMask(data&3);
+			GPUSTAT.MASKSET   =  data&1;
+			GPUSTAT.MASKCHECK = (data>>1)&1;
 			break;
 
 		//case 0xE7: break;
@@ -449,7 +457,7 @@ void PSXgpu::WriteData(u32 data) // 0x1F801810 GP0
 	case GPUMODE_DUMMY:
 		if(gpcount >= gpsize)
 		{
-			SetReadyVRAMtoCPU(0);
+			GPUSTAT.READYVRAMCPU = 0;
 			SetReady();
 		}
 		break;
@@ -468,7 +476,6 @@ void PSXgpu::ReadDataMem(u32 * pMem, int iSize)
 void PSXgpu::WriteDataMem(u32 * pMem, int iSize)
 {
 	DebugPrint("(%d)", iSize);
-	
 	for(int i = 0; i < iSize; i++) WriteData(pMem[i]);
 }
 
@@ -483,59 +490,34 @@ u32 PSXgpu::GetMode()
 	return 0;
 }
 
-// From PEOPS 
-// TODO: Understand this someday.
-
-unsigned long lUsedAddr[3];
-
-__inline BOOL CheckForEndlessLoop(unsigned long laddr)
+int PSXgpu::DmaChain(u32 *base, u32 addr)
 {
- if(laddr==lUsedAddr[1]) return TRUE;
- if(laddr==lUsedAddr[2]) return TRUE;
+	GPUSTAT.READYDMA = 0;
 
- if(laddr<lUsedAddr[0]) lUsedAddr[1]=laddr;
- else                   lUsedAddr[2]=laddr;
- lUsedAddr[0]=laddr;
- return FALSE;
+	u8 *mem = (u8*)base;
+
+	do
+	{
+		u32 *curWord = (u32*)&mem[addr];
+		u8 size = curWord[0] >> 24;
+		addr    = curWord[0] & 0xFFFFFF;
+
+		if(size) WriteDataMem(&curWord[1], size);
+		curWord[0] = 0x00FFFFFF; // Flag it, already used.
+
+	} while (addr != 0xFFFFFF);
+
+
+	GPUSTAT.READYDMA = 1;
+
+	return 0;
 }
 
-int PSXgpu::DmaChain(u32 * baseAddrL, u32 addr)
-{
- unsigned long dmaMem;
- unsigned char * baseAddrB;
- short count;unsigned int DMACommandCounter = 0;
-
- lUsedAddr[0]=lUsedAddr[1]=lUsedAddr[2]=0xffffff;
-
- baseAddrB = (unsigned char*) baseAddrL;
-
- do
-  {
-   if(DMACommandCounter++ > 2000000) break;
-   if(CheckForEndlessLoop(addr)) break;
-
-   count = baseAddrB[addr+3];
-
-   dmaMem=addr+4;
-
-   
-   if(count>0)
-   {
-	   DebugPrint("#%d [%02X|%06X]", DMACommandCounter, count, baseAddrL[dmaMem>>2]);
-	   WriteDataMem(&baseAddrL[dmaMem>>2],count);
-   }
-
-   addr = baseAddrL[addr>>2]&0xffffff;
-  }
- while (addr != 0xffffff);
-
- return 0;
-}
 
 void PSXgpu::SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 {
 	// ulControl[256]
-	STATUS = GPUSTAT;
+	STATUS = GPUSTAT.GetU32();
 	memcpy(MEM, VRAM.BYTE1, 1024*512*2);
 
 	CTRL[0] = GPUMODE;
@@ -552,7 +534,7 @@ void PSXgpu::SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 
 void PSXgpu::LoadState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 {
-	GPUSTAT = STATUS;
+	GPUSTAT.SetU32(STATUS);
 	memcpy(VRAM.BYTE1, MEM, 1024*512*2);
 
 	GPUMODE        = CTRL[0];

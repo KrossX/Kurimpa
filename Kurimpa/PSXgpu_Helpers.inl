@@ -15,6 +15,57 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+u32 SGPUSTAT::GetU32()
+{
+	u32 GPUSTATRAW = 0;
+
+	GPUSTATRAW |=  TPAGEX&0xF;
+	GPUSTATRAW |= (TPAGEY&1)      << 4;
+	GPUSTATRAW |= (BLENDEQ&3)     << 5;
+	GPUSTATRAW |= (PAGECOL&3)     << 7;
+	GPUSTATRAW |= (DITHER&1)      << 9;
+	GPUSTATRAW |= (DRAWDISPLAY&1) <<10;
+	GPUSTATRAW |= (MASKSET&1)     <<11;
+	GPUSTATRAW |= (MASKCHECK&1)   <<12;
+	GPUSTATRAW |= (RESERVED&1)    <<13;
+	GPUSTATRAW |= (REVERSED&1)    <<14;
+	GPUSTATRAW |= (TEXDISABLE&1)  <<15;
+	GPUSTATRAW |= (HRES2&1)       <<16;
+	GPUSTATRAW |= (HRES1&3)       <<17;
+	GPUSTATRAW |= (VRES&1)        <<19;
+	GPUSTATRAW |= (VMODE&1)       <<20;
+	GPUSTATRAW |= (DISPCOLOR&1)   <<21;
+	GPUSTATRAW |= (INTERLACED&1)  <<22;
+	GPUSTATRAW |= (DISPDISABLE&1) <<23;
+	GPUSTATRAW |= (IRQ1&1)        <<24;
+	GPUSTATRAW |= (DMA&1)         <<25;
+	GPUSTATRAW |= (READYCMD&1)    <<26;
+	GPUSTATRAW |= (READYVRAMCPU&1)<<27;
+	GPUSTATRAW |= (READYDMA&1)    <<28;
+	GPUSTATRAW |= (DMADIR&3)      <<29;
+	GPUSTATRAW |= (DRAWLINE&1)    <<31;
+
+	return GPUSTATRAW;
+}
+
+void SGPUSTAT::SetU32(u32 reg)
+{
+}
+
+void SGPUSTAT::SetTEXPAGE(u16 PAGE)
+{
+	TPAGEX      =  PAGE&0xF;
+	TPAGEY      = (PAGE>>4)&1;
+	BLENDEQ     = (PAGE>>5)&3;
+	PAGECOL     = (PAGE>>7)&3;
+	//DITHER      = (PAGE>>9)&1;
+	//DRAWDISPLAY = (PAGE>>10)&1;
+	TXPDISABLE  = (PAGE>>11)&1;
+	//RECT_FLIPX  = (PAGE>>12)&1;
+	//RECT_FLIPY  = (PAGE>>13)&1;
+}
+
+
 inline void TEXWIN::SetMaskOffset(u32 data)
 {
 	MSKx = data & 0x1F;
@@ -28,10 +79,10 @@ inline void TEXWIN::SetMaskOffset(u32 data)
 	MSKy = ~(MSKy << 3);
 }
 
-inline void TEXWIN::SetPAGE(u16 VRAM[][1024], u32 &GPUSTAT)
+inline void TEXWIN::SetPAGE(u16 VRAM[][1024], SGPUSTAT &GPUSTAT)
 {
-	u16 PX = GPUSTAT & 0xF;
-	u16 PY = (GPUSTAT >> 4) & 1;
+	u16 PX = GPUSTAT.TPAGEX;
+	u16 PY = GPUSTAT.TPAGEY;
 	PAGE = &VRAM[PY << 8][PX << 6];
 }
 

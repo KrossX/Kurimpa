@@ -17,6 +17,46 @@
 
 #pragma once
 
+struct SGPUSTAT
+{
+	// TEXPAGE
+	u8 TPAGEX;      // 00-4bits (N*64)
+	u8 TPAGEY;      // 04 (N*256) (ie. 0 or 256)
+	u8 BLENDEQ;     // 05-2bits (0=B/2+F/2, 1=B+F, 2=B-F, 3=B+F/4)
+	u8 PAGECOL;     // 07-2bits (0=4bit, 1=8bit, 2=15bit, 3=Reserved)
+	u8 DITHER;      // 09 24 to 15bits (0=Off/strip LSBs, 1=Dither Enabled)
+	u8 DRAWDISPLAY; // 10 (0=Prohibited, 1=Allowed)
+	u8 MASKSET;     // 11 (0=No, 1=Yes/Mask)
+	u8 MASKCHECK;   // 12 (0=Always, 1=Not to Masked areas)
+	u8 RESERVED;    // 13 reserved, always set?
+	u8 REVERSED;    // 14 "reversed flag"
+	u8 TEXDISABLE;  // 15 (0=Normal, 1=Disable Textures)
+
+	u8 TXPDISABLE; // ??
+	u8 RECT_FLIPX; // ??
+	u8 RECT_FLIPY; // ??
+
+	u8 HRES2;       // 16 (0=256/320/512/640, 1=368)
+	u8 HRES1;       // 17-2bits (0=256, 1=320, 2=512, 3=640)
+	u8 VRES;        // 19 (0=240, 1=480, when Bit22=1)
+	u8 VMODE;       // 20 (0=NTSC/60Hz, 1=PAL/50Hz)
+	u8 DISPCOLOR;   // 21 (0=15bit, 1=24bit)
+	u8 INTERLACED;  // 22 (0=Off, 1=On)
+	u8 DISPDISABLE; // 23 (0=Enabled, 1=Disabled)
+	u8 IRQ1;        // 24 (0=Off, 1=IRQ)
+	u8 DMA;         // 25 DMA / Data Request
+
+	u8 READYCMD;     // 26 Ready to receive command (0=No, 1=Ready) // Wait finish drawing primites (1) || isDrawing wait
+	u8 READYVRAMCPU; // 27 (0=No, 1=Ready)
+	u8 READYDMA;     // 28 Ready to receive DMA Block (0=No, 1=Ready) // Wait for gpu to be free (1)
+	u8 DMADIR;       // 29-2bits (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)
+	u8 DRAWLINE;     // 31 (0=Even or Vblank, 1=Odd)
+
+	u32 GetU32();
+	void SetU32(u32 reg);
+	void SetTEXPAGE(u16 PAGE);
+};
+
 union CommandPacket
 {
 	struct
@@ -39,7 +79,7 @@ struct TEXWIN
 
 	u16 *CLUT, *PAGE;
 
-	inline void SetPAGE(u16 VRAM[][1024], u32 &GPUSTAT);
+	inline void SetPAGE(u16 VRAM[][1024], SGPUSTAT &GPUSTAT);
 	inline void SetCLUT(u16 VRAM[][1024], u16 &data);
 	inline void SetMaskOffset(u32 data);
 
@@ -104,16 +144,14 @@ struct DISPINFO
 
 	bool changed;
 
-	void SetMode(u32 REG)
+	void SetMode(SGPUSTAT &REG)
 	{
-		u8 hres2 = ((REG & GPUSTAT_HRES1) >> 17) &3;
-
-		if(REG & GPUSTAT_HRES2)
+		if(REG.HRES2)
 		{
 			width = 368;
 			cycles = 7;
 		}
-		else switch(hres2)
+		else switch(REG.HRES1)
 		{
 		case 0: width = 256; cycles = 10; break;
 		case 1: width = 320; cycles = 8; break;
@@ -121,11 +159,11 @@ struct DISPINFO
 		case 3: width = 640; cycles = 4; break;
 		}
 
-		isPAL = !!(REG & GPUSTAT_VMODE);
-		is24bpp = !!(REG & GPUSTAT_DISPCOLOR);
-		isInterlaced = !!(REG & GPUSTAT_INTERLACED);
+		isPAL = !!REG.VMODE;
+		is24bpp = !!REG.DISPCOLOR;
+		isInterlaced = !!REG.INTERLACED;
 
-		height = ((REG & GPUSTAT_VRES) && isInterlaced) ? 480 : 240;
+		height = (REG.VRES && isInterlaced) ? 480 : 240;
 		scanlines = isPAL ? 264 : 224; // PAL 255, 254 ??
 		is480i = height == 480;
 
@@ -188,8 +226,8 @@ struct PSXgpu
 
 	u8 GPUMODE;
 
+	SGPUSTAT GPUSTAT;
 	u32 GPUREAD;
-	u32 GPUSTAT;
 
 	u32 DISP_START;  // GP1(05h);
 	u32 DISP_RANGEH; // GP1(06h);
@@ -215,20 +253,8 @@ struct PSXgpu
 		u16 HALF2[0x200][0x400]; // Y, X
 	} VRAM;
 
-	void SetTEXPAGE(u16 &data) { GPUSTAT &= ~0x1FF; GPUSTAT |= (data&0x1FF); } // 0x1FF
-	void SetMask(u8 bit2) { GPUSTAT &= ~(GPUSTAT_MASKSET | GPUSTAT_MASKCHECK); GPUSTAT |= (bit2&3) << 11; }
-	void SetTextureDisable(u8 bit) { GPUSTAT &= ~GPUSTAT_TEXDISABLE; GPUSTAT |= (bit&1) << 15; }
-	void SetDisplayDisable(u8 bit) { GPUSTAT &= ~GPUSTAT_DISPDISABLE; GPUSTAT |= (bit&1) << 23; }
-	void SetIRQ(u8 bit) { GPUSTAT &= ~GPUSTAT_IRQ1; GPUSTAT |= (bit&1) << 24; }
-	void SetDMA(u8 bit) { GPUSTAT &= ~GPUSTAT_DMA; GPUSTAT |= (bit&1) << 25; }
-	void SetReadyCMD(u8 bit) { GPUSTAT &= ~GPUSTAT_READYCMD; GPUSTAT |= (bit&1) << 26; }
-	void SetReadyVRAMtoCPU(u8 bit) { GPUSTAT &= ~GPUSTAT_READYVRAMCPU; GPUSTAT |= (bit&1) << 27; }
-	void SetReadyDMA(u8 bit) { GPUSTAT &= ~GPUSTAT_READYDMA; GPUSTAT |= (bit&1) << 28; }
-	void SetDMAdirection(u8 bit2)  { GPUSTAT &= ~GPUSTAT_DMADIR; GPUSTAT |= (bit2&3) << 29; }
-	void SetDrawLine(u8 bit) { GPUSTAT &= ~GPUSTAT_DRAWLINE; GPUSTAT |= (bit&1) << 31; }
-
-	bool doMaskCheck(u16 &x, u16 &y) { return (GPUSTAT & GPUSTAT_MASKCHECK) && (VRAM.HALF2[y][x] & 0x8000); }
-	bool doMaskCheck(u16 &pix) { return (GPUSTAT & GPUSTAT_MASKCHECK) && (pix & 0x8000); }
+	bool doMaskCheck(u16 &x, u16 &y) { return GPUSTAT.MASKCHECK && (VRAM.HALF2[y][x] & 0x8000); }
+	bool doMaskCheck(u16 &pix) { return GPUSTAT.MASKCHECK && (pix & 0x8000); }
 	
 	u32 gpcount;
 	u32 gpsize;
@@ -313,7 +339,7 @@ public:
 	void SetMode(u32 data);
 	u32 GetMode();
 
-	int DmaChain(u32 * base, u32 addr);
+	int DmaChain(u32 *base, u32 addr);
 
 	void SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM);
 	void LoadState(u32 &STATUS, u32 *CTRL, u8 *MEM);
