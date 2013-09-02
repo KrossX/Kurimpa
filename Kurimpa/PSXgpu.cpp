@@ -212,7 +212,7 @@ void PSXgpu::LaceUpdate()
 	DWORD newtime = GetTickCount();
 	DWORD diff = newtime - oldtime;
 
-	if(diff > 100)
+	if(diff > 500)
 	{
 		char buff[256];
 		memset(buff, 0, sizeof(buff));
@@ -490,7 +490,7 @@ u32 PSXgpu::GetMode()
 	return 0;
 }
 
-#if 1
+#if 0
 // From PEOPS
 // TODO: Understand this someday.
 
@@ -551,9 +551,7 @@ int PSXgpu::DmaChain(u32 *base, u32 addr)
 		u32 *curWord = (u32*)&mem[addr];
 		u8 size = curWord[0] >> 24;
 		addr    = curWord[0] & 0xFFFFFF;
-
 		if(size) WriteDataMem(&curWord[1], size);
-		curWord[0] = 0x00FFFFFF; // Flag it, already used.
 
 	} while (addr != 0xFFFFFF);
 
