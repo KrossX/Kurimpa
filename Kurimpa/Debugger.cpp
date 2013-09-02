@@ -20,6 +20,28 @@
 FILE *logfile = NULL;
 FILE *shaderlog = NULL;
 
+#define BUFFSIZE 1024
+
+void _Print2File(const char* str)
+{
+	static char buff[BUFFSIZE];
+	static u32 counter = 0;
+
+	if(strcmp(str, buff) == 0)
+	{
+		counter++;
+	}
+	else
+	{
+		if(counter) fprintf(logfile, "%s <x%d>\n", buff, counter);
+		else        fprintf(logfile, "%s\n", buff);
+
+		memcpy(buff, str, BUFFSIZE);
+		fflush(logfile);
+		counter = 0;
+	}
+}
+
 bool DebugOpen()
 {
 	logfile = fopen("kurimpa.log", "w");
@@ -32,9 +54,13 @@ void DebugClose()
 	if(shaderlog) fclose(shaderlog);
 	shaderlog = NULL;
 
-	if(logfile) fprintf(logfile, "DebugClose\n");
-	if(logfile) fclose(logfile);
-	logfile = NULL;
+	if(logfile)
+	{
+		_Print2File(""); // flush last repeat
+		fprintf(logfile, "DebugClose\n");
+		fclose(logfile);
+		logfile = NULL;
+	}
 }
 
 void _DebugShader(const char* message, int length)
@@ -52,8 +78,9 @@ void _DebugFunc(const char* func)
 	if(!logfile) return;
 	//if(!GetAsyncKeyState(VK_INSERT)) return;
 
-	fprintf(logfile, "%s\n", func);
-	fflush(logfile);
+	char buff[BUFFSIZE];
+	sprintf(buff, "%s", func);
+	_Print2File(buff);
 }
 
 void _DebugPrint(const char* func, const char* fmt, ...)
@@ -63,13 +90,12 @@ void _DebugPrint(const char* func, const char* fmt, ...)
 	//if(!GetAsyncKeyState(VK_INSERT)) return;
 
 	va_list args;
-	
-	fprintf(logfile, "%s : ", func);
-	
+	char buff[2][BUFFSIZE];
+
 	va_start(args,fmt);
-	vfprintf(logfile, fmt, args);
+	vsprintf(buff[1], fmt, args);
 	va_end(args);
-	
-	fprintf(logfile, "\n");
-	fflush(logfile);
+
+	sprintf(buff[0], "%s : %s", func, buff[1]); 
+	_Print2File(buff[0]);
 }
