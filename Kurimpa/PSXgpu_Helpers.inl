@@ -50,6 +50,31 @@ u32 SGPUSTAT::GetU32()
 
 void SGPUSTAT::SetU32(u32 reg)
 {
+	TPAGEX       =  reg&0xF;
+	TPAGEY       = (reg>>4)&1;
+	BLENDEQ      = (reg>>5)&3;
+	PAGECOL      = (reg>>7)&3;
+	DITHER       = (reg>>9)&1;
+	DRAWDISPLAY  = (reg>>10)&1;
+	MASKSET      = (reg>>11)&1;
+	MASKCHECK    = (reg>>12)&1;
+	RESERVED     = (reg>>13)&1;
+	REVERSED     = (reg>>14)&1;
+	TEXDISABLE   = (reg>>15)&1;
+	HRES2        = (reg>>16)&1;
+	HRES1        = (reg>>17)&3;
+	VRES         = (reg>>19)&1;
+	VMODE        = (reg>>20)&1;
+	DISPCOLOR    = (reg>>21)&1;
+	INTERLACED   = (reg>>22)&1;
+	DISPDISABLE  = (reg>>23)&1;
+	IRQ1         = (reg>>24)&1;
+	DMA          = (reg>>25)&1;
+	READYCMD     = (reg>>26)&1;
+	READYVRAMCPU = (reg>>27)&1;
+	READYDMA     = (reg>>28)&1;
+	DMADIR       = (reg>>29)&3;
+	DRAWLINE     = (reg>>31)&1;
 }
 
 void SGPUSTAT::SetTEXPAGE(u16 PAGE)
