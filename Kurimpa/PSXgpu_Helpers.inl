@@ -136,11 +136,3 @@ inline void DRAWAREA::SetOFFSET(u32 data)
 	OFFy = (s16)oy; OFFy >>= 5;
 }
 
-
-inline void DRAWAREA::PolyAreaClip(s16 &minX, s16 &maxX, s16 &minY, s16 &maxY)
-{
-	minX = max(minX, L - OFFx);
-	maxX = min(maxX, R - OFFx);
-	minY = max(minY, T - OFFy);
-	maxY = min(maxY, B - OFFy);
-}

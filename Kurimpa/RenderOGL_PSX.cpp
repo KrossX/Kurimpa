@@ -44,8 +44,8 @@ void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 		switch(wp)
 		{
 		case VK_MULTIPLY: ToggleFiltering(); break;
-		case VK_F9: ToggleVsync(); break;
-		case VK_F11: ToggleVRAM(); break;
+		case VK_ADD: ToggleVsync(); break;
+		case VK_SUBTRACT: ToggleVRAM(); break;
 		case VK_RETURN: if(kbuff[VK_MENU]) ToggleFullscreen(); break;
 		}
 		break;

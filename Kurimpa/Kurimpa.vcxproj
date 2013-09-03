@@ -98,6 +98,7 @@
     <ClInclude Include="PSemuPro_Interface.h" />
     <ClInclude Include="PSXgpu.h" />
     <ClInclude Include="PSXgpu_Enums.h" />
+    <ClInclude Include="RasterPSX.h" />
     <ClInclude Include="RenderOGL_PSX.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TGA_Header.h" />
@@ -112,6 +113,7 @@
     <ClCompile Include="PlayStation.cpp" />
     <ClCompile Include="OS_Windows.cpp" />
     <ClCompile Include="PSXgpu.cpp" />
+    <ClCompile Include="RasterPSX_SW.cpp" />
     <ClCompile Include="RenderOGL_PSX.cpp" />
   </ItemGroup>
   <ItemGroup>

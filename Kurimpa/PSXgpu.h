@@ -102,7 +102,13 @@ struct DRAWAREA
 	void ApplyOffset(s16 &x, s16 &y) { x += OFFx; y += OFFy; }
 	bool ScissorTest(s16 &x, s16 &y) { return (x > R) || (y > B) || (x < L) || (y < T); }
 
-	inline void PolyAreaClip(s16 &minX, s16 &maxX, s16 &minY, s16 &maxY);
+	void PolyAreaClip(s16 &minX, s16 &maxX, s16 &minY, s16 &maxY)
+	{
+		minX = max(minX, L - OFFx);
+		maxX = min(maxX, R - OFFx);
+		minY = max(minY, T - OFFy);
+		maxY = min(maxY, B - OFFy);
+	}
 };
 
 struct TRANSFER
@@ -218,6 +224,16 @@ struct DISPINFO
 	
 };
 
+union PSXVRAM
+{
+	u8 BYTE1[0x100000];
+	u16 HALF2[0x200][0x400]; // Y, X
+};
+
+struct RasterPSX;
+struct RasterPSXSW;
+class RenderOGL_PSX;
+
 struct PSXgpu
 {
 	HINSTANCE hInstance;
@@ -247,11 +263,7 @@ struct PSXgpu
 
 	vectk vertex[4];
 
-	union
-	{
-		u8 BYTE1[0x100000];
-		u16 HALF2[0x200][0x400]; // Y, X
-	} VRAM;
+	PSXVRAM VRAM;
 
 	bool doMaskCheck(u16 &x, u16 &y) { return GPUSTAT.MASKCHECK && (VRAM.HALF2[y][x] & 0x8000); }
 	bool doMaskCheck(u16 &pix) { return GPUSTAT.MASKCHECK && (pix & 0x8000); }
@@ -270,17 +282,9 @@ struct PSXgpu
 	void Reset();
 	void Command(u32 data);
 
-	inline u16 Blend(u16 &back, u16 &front);
-	inline void SetPixel(u32 color, s16 x, s16 y, u16 texel);
-
-	template<bool textured, bool modulate, bool blend>
-	inline void SetPixel(u32 color, s16 x, s16 y, u16 texel);
-
-	inline u16  GetTexel(u8 tx, u8 ty);
-	
-	template <RENDERTYPE render_mode> inline void RasterLine();
-	template <RENDERTYPE render_mode> inline void RasterPoly3();
-	template <RENDERTYPE render_mode> inline void RasterPoly4();
+	RenderOGL_PSX *render;
+	RasterPSX *raster;
+	RasterPSXSW *rasterSW;
 
 	inline void DrawPoly3  (u32 data);
 	inline void DrawPoly3T (u32 data);

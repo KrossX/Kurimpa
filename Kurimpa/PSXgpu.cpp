@@ -18,10 +18,8 @@
 #include "General.h"
 #include "PSXgpu_Enums.h"
 #include "PSXgpu.h"
+#include "RasterPSX.h"
 #include "RenderOGL_PSX.h"
-#include <cmath>
-
-RenderOGL_PSX *render = NULL;
 
 #include "PSXgpu_Helpers.inl"
 #include "PSXgpu_Draw.inl"
@@ -30,8 +28,11 @@ RenderOGL_PSX *render = NULL;
 int PSXgpu::Init()
 {
 	DebugFunc();
-	//memset(VRAM.BYTE1, 0x00, sizeof(VRAM));
-	
+
+	render = NULL;
+	raster = NULL;
+	rasterSW = NULL;
+
 	Reset();
 	return 0;
 }
@@ -72,11 +73,16 @@ int PSXgpu::Open(HWND hGpuWnd)
 	DebugFunc();
 
 	render = new RenderOGL_PSX();
-	if(!render || !render->Init(hGpuWnd, VRAM.BYTE1))
+	rasterSW = new RasterPSXSW();
+
+	if(!render || !rasterSW || !render->Init(hGpuWnd, VRAM.BYTE1))
 	{
 		PostMessage(hGpuWnd, WM_KEYDOWN, VK_ESCAPE, 0);
 		return -1;
 	}
+
+	raster = rasterSW;
+	rasterSW->InitPointers(&GPUSTAT, &DA, &VRAM, &TW, vertex, &TR);
 
 	return 0;
 }
@@ -89,8 +95,17 @@ int PSXgpu::Close()
 	{
 		render->Shutdown();
 		delete render;
-		render = NULL;
 	}
+
+	if(rasterSW)
+	{
+		// shutdown?
+		delete rasterSW;
+	}
+
+	render = NULL;
+	raster = NULL;
+	rasterSW = NULL;
 
 	return 0;
 }
@@ -564,7 +579,6 @@ int PSXgpu::DmaChain(u32 *base, u32 addr)
 
 void PSXgpu::SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 {
-	// ulControl[256]
 	STATUS = GPUSTAT.GetU32();
 	memcpy(MEM, VRAM.BYTE1, 1024*512*2);
 

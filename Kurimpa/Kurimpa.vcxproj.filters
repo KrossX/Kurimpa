@@ -63,6 +63,9 @@
     <ClInclude Include="TGA_Header.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RasterPSX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PSXgpu.cpp">
@@ -87,6 +90,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PlayStation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RasterPSX_SW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
