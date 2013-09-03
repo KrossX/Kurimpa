@@ -17,9 +17,9 @@ No settings, and no INI either.
 
 Keys:
 ALT+ENTER, fullscreen toggle
-MULT, toggle filtering (not for 24bpp mode)
-F9, vsync toggle
-F11, show vram
+MULTIPLY, toggle filtering
+ADD, vsync toggle
+SUBTRACT, show vram
 PRINT SCREEN, window screenshot + vram..shot
 
 
