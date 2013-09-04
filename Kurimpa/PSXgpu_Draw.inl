@@ -280,10 +280,10 @@ void PSXgpu::DrawLineS(u32 data)
 		break;
 
 	default:
-		if(data == 0x55555555) SetReady();
+		if(data & 0x50005000) SetReady();
 		else
 		{
-			u8 vx = (gpcount % 2) ? 0 : 1; 
+			u8 vx = 1 - (gpcount % 2);
 			vertex[vx].SetV(data);
 			raster->RasterLine(RENDER_FLAT);
 		}
@@ -333,7 +333,7 @@ void PSXgpu::DrawLineGS(u32 data)
 		break;
 
 	default:
-		if(data == 0x55555555) SetReady();
+		if(data & 0x50005000) SetReady();
 		else
 		{
 			if(line % 2)
