@@ -507,27 +507,24 @@ u32 PSXgpu::GetMode()
 
 int PSXgpu::DmaChain(u32 *base32, u32 addr)
 {
-	// Dunno, but fixes stuff
-	if(GPUSTAT.DMADIR != 2) return 0;
-
-	u32 prevaddr[3] = {-1, -1, -1};
 	int counter = 0;
+	u32 prevword[2] = {-1, -1};
 
-	do
+	while (GPUSTAT.DMADIR == 2)
 	{
-		addr >>= 2;
-		if(addr == prevaddr[1] || addr == prevaddr[2]) break;
+		u32 *currword = &base32[addr >> 2]; // Do out of bounds check?
 
-		if(addr < prevaddr[0]) prevaddr[1] = addr;
-		else                   prevaddr[2] = addr;
+		if((currword[0] == prevword[0]) || (currword[0] == prevword[1])) break;
+		prevword[counter%2] = currword[0];
 
-		u32 *currword = &base32[addr]; // addr & 0x7FFFF  // out of bounds check?
+		//printf("DmaChain: (%08X|%08X) 0[%08X]\n", currword, addr, currword[0]);
+		
 		u8 size = currword[0] >> 24;
 		addr    = currword[0] & 0xFFFFFF;
 
 		if(size) WriteDataMem(&currword[1], size);
-
-	} while (addr != 0xFFFFFF && ++counter <= 2000000);
+		if(addr == 0xFFFFFF || ++counter > 2000000) break;
+	}
 
 	return 0;
 }
