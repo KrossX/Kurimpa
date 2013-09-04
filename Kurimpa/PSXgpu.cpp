@@ -505,77 +505,32 @@ u32 PSXgpu::GetMode()
 	return 0;
 }
 
-#if 0
-// From PEOPS
-// TODO: Understand this someday.
-
-unsigned long lUsedAddr[3];
-
-__inline BOOL CheckForEndlessLoop(unsigned long laddr)
+int PSXgpu::DmaChain(u32 *base32, u32 addr)
 {
- if(laddr==lUsedAddr[1]) return TRUE;
- if(laddr==lUsedAddr[2]) return TRUE;
+	// Dunno, but fixes stuff
+	if(GPUSTAT.DMADIR != 2) return 0;
 
- if(laddr<lUsedAddr[0]) lUsedAddr[1]=laddr;
- else lUsedAddr[2]=laddr;
- lUsedAddr[0]=laddr;
- return FALSE;
-}
-
-int PSXgpu::DmaChain(u32 * baseAddrL, u32 addr)
-{
- unsigned long dmaMem;
- unsigned char * baseAddrB;
- short count;unsigned int DMACommandCounter = 0;
-
- lUsedAddr[0]=lUsedAddr[1]=lUsedAddr[2]=0xffffff;
-
- baseAddrB = (unsigned char*) baseAddrL;
-
- do
-  {
-   if(DMACommandCounter++ > 2000000) break;
-   if(CheckForEndlessLoop(addr)) break;
-
-   count = baseAddrB[addr+3];
-
-   dmaMem=addr+4;
-
-   
-   if(count>0)
-   {
-DebugPrint("#%d [%02X|%06X]", DMACommandCounter, count, baseAddrL[dmaMem>>2]);
-WriteDataMem(&baseAddrL[dmaMem>>2],count);
-   }
-
-   addr = baseAddrL[addr>>2]&0xffffff;
-  }
- while (addr != 0xffffff);
-
- return 0;
-}
-#else
-int PSXgpu::DmaChain(u32 *base, u32 addr)
-{
-	GPUSTAT.READYDMA = 0;
-
-	u8 *mem = (u8*)base;
+	u32 prevaddr[3] = {-1, -1, -1};
+	int counter = 0;
 
 	do
 	{
-		u32 *curWord = (u32*)&mem[addr];
-		u8 size = curWord[0] >> 24;
-		addr    = curWord[0] & 0xFFFFFF;
-		if(size) WriteDataMem(&curWord[1], size);
+		addr >>= 2;
+		if(addr == prevaddr[1] || addr == prevaddr[2]) break;
 
-	} while (addr != 0xFFFFFF);
+		if(addr < prevaddr[0]) prevaddr[1] = addr;
+		else                   prevaddr[2] = addr;
 
+		u32 *currword = &base32[addr]; // addr & 0x7FFFF  // out of bounds check?
+		u8 size = currword[0] >> 24;
+		addr    = currword[0] & 0xFFFFFF;
 
-	GPUSTAT.READYDMA = 1;
+		if(size) WriteDataMem(&currword[1], size);
+
+	} while (addr != 0xFFFFFF && ++counter <= 2000000);
 
 	return 0;
 }
-#endif
 
 void PSXgpu::SaveState(u32 &STATUS, u32 *CTRL, u8 *MEM)
 {
