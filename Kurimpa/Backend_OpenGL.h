@@ -30,6 +30,8 @@ public:
 	bool CompileFromBuffer(const char *buffer, const char *defines);
 	bool CompileFromFile(const char *path, const char *defines);
 	bool Delete();
+
+	OGLShader() { ID = 0; created = false; }
 };
 
 class OGLProgram
@@ -46,6 +48,8 @@ public:
 	bool Link();
 	bool Use();
 	bool Delete();
+
+	OGLProgram() { ID = 0; created = false; }
 };
 
 
@@ -99,6 +103,8 @@ public:
 	static bool GLfail(const char* msg);
 	static bool GLfail(const char* msg, u32 err);
 	void UpdateTitle(const char* title);
+
+	Backend_OpenGL();
 };
 
 #endif

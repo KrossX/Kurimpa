@@ -77,7 +77,15 @@ int PSXgpu::Open(HWND hGpuWnd)
 
 	if(!render || !rasterSW || !render->Init(hGpuWnd, VRAM.BYTE1))
 	{
+		if(!render)
+			printf("Kurimpa -> Error! Could not create renderer.\n");
+		else if(!rasterSW)
+			printf("Kurimpa -> Error! Could not create SW rasterizer.\n");
+		else
+			printf("Kurimpa -> Error! Could not Init renderer.\n");
+
 		PostMessage(hGpuWnd, WM_KEYDOWN, VK_ESCAPE, 0);
+		Close();
 		return -1;
 	}
 

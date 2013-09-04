@@ -33,7 +33,7 @@ void _Print2File(const char* str)
 	}
 	else
 	{
-		if(counter) fprintf(logfile, "%s <x%d>\n", buff, counter);
+		if(counter) fprintf(logfile, "%s <x%u>\n", buff, counter);
 		else        fprintf(logfile, "%s\n", buff);
 
 		memcpy(buff, str, BUFFSIZE);
@@ -76,7 +76,7 @@ void _DebugFunc(const char* func)
 {
 	if(!logfile) DebugOpen();
 	if(!logfile) return;
-	//if(!GetAsyncKeyState(VK_INSERT)) return;
+	if(!GetAsyncKeyState(VK_INSERT)) return;
 
 	char buff[BUFFSIZE];
 	sprintf(buff, "%s", func);
@@ -87,7 +87,7 @@ void _DebugPrint(const char* func, const char* fmt, ...)
 {
 	if(!logfile) DebugOpen();
 	if(!logfile) return;
-	//if(!GetAsyncKeyState(VK_INSERT)) return;
+	if(!GetAsyncKeyState(VK_INSERT)) return;
 
 	va_list args;
 	char buff[2][BUFFSIZE];

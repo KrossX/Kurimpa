@@ -30,6 +30,8 @@ public:
 	bool LoadShadersFromBuff(const char *vbuff, const char *fbuff, const char* defs);
 	void SetDisplaySize(int ox, int oy, int width, int height);
 	void SetDisplayOffset(int offx1, int offy1, int offx2, int offy2);
+
+	psxProgram() { Sampler = DisplaySize = DisplayOffset = 0; }
 };
 
 class RenderOGL_PSX : public Backend_OpenGL
@@ -65,7 +67,7 @@ class RenderOGL_PSX : public Backend_OpenGL
 		u32 background_va; // Backgrond vertex array
 	} gl;
 
-	bool CreateVRAMtexture(u32 &tex);
+	bool CreateVRAMtexture(u32 *tex);
 
 	void ToggleVRAM();
 	void ToggleVsync();
@@ -84,7 +86,8 @@ public:
 	void Present(bool is24bpp, bool disabled);
 	bool Init(HWND hWin, u8 *psxvram);
 	void Shutdown();
-	
+
+	RenderOGL_PSX();
 };
 
 

@@ -29,6 +29,25 @@
 WNDPROC oldWinProc = NULL; // Parent Window Prodedure function
 RenderOGL_PSX *ogl_psx = NULL; // Current instance
 
+RenderOGL_PSX::RenderOGL_PSX()
+{
+	linearfilter = true;
+	usevsync = false;
+	fullscreen = false;
+	show_vram = false;
+
+	psx.vram = NULL;
+	psx.width = psx.height = 0;
+	psx.ox = psx.oy = 0;
+	psx.offx1 = psx.offx2 = 0;
+	psx.offy1 = psx.offy2 = 0;
+
+	gl.tVRAM = 0;
+	gl.background_uv = 0;
+	gl.background_va = 0;
+	gl.background_vb = 0;
+}
+
 //---------------------------------------------------------------[WINDOWSTUFF]
 
 void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -180,32 +199,37 @@ const GLuint TEX_TYPE      = GL_UNSIGNED_SHORT;
 
 //---------------------------------------------------------------[INIT]
 
-bool RenderOGL_PSX::CreateVRAMtexture(GLuint &tex)
+bool RenderOGL_PSX::CreateVRAMtexture(GLuint *tex)
 {
-	if(tex) glDeleteTextures(1, &tex);
-
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_RECTANGLE, tex);
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, TEX_INTFORMAT, 1024, 512, 0, TEX_FORMAT, TEX_TYPE, 0);
-
+	glGenTextures(1, tex);
+	glBindTexture(GL_TEXTURE_RECTANGLE, *tex);
+	
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
+	
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	if(GLfail("Create tVRAM")) return false;
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, TEX_INTFORMAT, 1024, 512, 0, TEX_FORMAT, TEX_TYPE, 0);
 	
 	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+
+	if(GLfail("Create tVRAM")) return false;
 
 	return true;
 }
-
 
 #include "Shaders\RenderOGL_PSX_Shaders.inl"
 
 bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 {
+	if(!hWin)
+	{
+		printf("Kurimpa -> Error! Invalid window handle.\n");
+		return false;
+	};
+
 	//HWND hWin = CreateGLWindow(L"Kurimpa", 640, 480);
 
 	if(!Backend_OpenGL::Init(hWin))
@@ -215,21 +239,16 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 	oldWinProc = (proc && (WNDPROC)proc != WindowProc)? (WNDPROC)proc : DefWindowProc;
 	SetWindowLong(hWin, GWL_WNDPROC, (LONG)WindowProc);
 
-	linearfilter = true;
-	usevsync = false;
-	show_vram = false;
-	fullscreen = false;
-
-	InitFramebuffer(640, 480);
+	if(!InitFramebuffer(640, 480))
+	{
+		printf("Kurimpa -> Error! Could not init framebuffer.\n");
+		return false;
+	}
 
 	SetWindowTextA(hWin, "Kurimpa");
 	SetWindowed(640,480);
-	SetAspectRatio(4.0f/3.0f);
-
-	wglSwapIntervalEXT(usevsync ? 1 : 0);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-	if(!CreateVRAMtexture(gl.tVRAM)) return false;
+	
+	if(!CreateVRAMtexture(&gl.tVRAM)) return false;
 	if(!PrepareDisplayQuad()) return false;
 
 	for(int i = 0; i < PROG_SIZE; i++)
@@ -242,6 +261,12 @@ bool RenderOGL_PSX::Init(HWND hWin, u8 *psxvram)
 
 	ogl_psx = this;
 	psx.vram = psxvram;
+
+	SetAspectRatio(4.0f/3.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	wglSwapIntervalEXT(usevsync ? -1 : 0);
+
+	while(glGetError() != GL_NO_ERROR) {}; // Clean up errors.
 
 	return true;
 }

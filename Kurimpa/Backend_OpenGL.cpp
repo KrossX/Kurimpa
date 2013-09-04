@@ -26,6 +26,27 @@
 #include <fstream>
 #include <vector>
 
+
+Backend_OpenGL::Backend_OpenGL()
+{
+	fbid = fbcolor = 0;
+	fbwidth = fbheight = 0;
+	quadva = quadvb = quaduv = 0; // Quad vertex array, buffer and tex coords
+	fbfiltering = true;
+
+	aspectr = 1.0;
+	memset(&viewport, 0, sizeof(RECT));
+	memset(&oldrect, 0, sizeof(RECT));
+
+	oldstyle = 0;
+	scwidth = scheight = 0; // Screensize
+
+	hTempGLCtx = 0;
+	hRenderCtx = 0;
+	hDeviceCtx = 0;
+	hWindow = 0;
+}
+
 //---------------------------------------------------------------[CONSTANTS]
 
 const GLuint VER_MAJOR = 3;
@@ -85,7 +106,8 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 	int attributes[] = {
 	WGL_CONTEXT_MAJOR_VERSION_ARB, VER_MAJOR,
 	WGL_CONTEXT_MINOR_VERSION_ARB, VER_MINOR,
-	WGL_CONTEXT_FLAGS_ARB ,  WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, 0};
+	WGL_CONTEXT_FLAGS_ARB , WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, 0};
+	//WGL_CONTEXT_FLAGS_ARB , WGL_CONTEXT_DEBUG_BIT_ARB | WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, 0};
 	
 	hRenderCtx = wglCreateContextAttribsARB(hDeviceCtx, NULL, attributes);
 	if(!hRenderCtx) return false;
@@ -115,9 +137,10 @@ bool Backend_OpenGL::CreateContext(HWND hWnd)
 
 bool Backend_OpenGL::Init(HWND hWin)
 {
-	if(!hWin || !CreateContext(hWin))
+	if(!CreateContext(hWin))
 	{
 		GLfail("OGL Init");
+		printf("Kurimpa -> Error! OpenGL context creation failed.\n");
 		Shutdown();
 		return false;
 	}
@@ -127,11 +150,6 @@ bool Backend_OpenGL::Init(HWND hWin)
 	
 	oldrect.top = 200;
 	oldrect.left = 200;
-
-	fbwidth = 0;
-	fbheight = 0;
-
-	fbfiltering = true;
 
 	return true;
 }
@@ -238,9 +256,12 @@ bool Backend_OpenGL::InitFramebuffer(int width, int height)
 	fbprog.BindAttribLocation(1, "QuadUV");
 	fbprog.Link();
 
-	u32 sampler = fbprog.GetUniformLocation("framebuffer");
 	fbprog.Use();
+	u32 sampler = fbprog.GetUniformLocation("framebuffer");
 	glUniform1i(sampler, 0);
+
+	if(GLfail("Framebuffer Error!"))
+		return false;
 	
 	return true;
 }
@@ -305,6 +326,7 @@ void Backend_OpenGL::SetFramebufferSize(int width, int height)
 
 	float color[] = { 0.0f, 0.0f, 0.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbid);
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbcolor, 0);
