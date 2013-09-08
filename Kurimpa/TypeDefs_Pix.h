@@ -17,9 +17,29 @@
 
 #pragma once
 
-union RGBA5551 { struct{u16 R:5, G:5, B:5, A:1;}; u16 RAW; };
-union RGBA8 { struct{u8 R, G, B, A;}; u32 RAW; };
-union VDATA { struct{ s32 x:11; s32 : 5; s32 y:11; s32 : 5;}; u32 RAW;};
+union RGBA5551
+{
+	struct{u16 R:5, G:5, B:5, A:1;};
+	u16 RAW;
+
+	RGBA5551(u16 data) : RAW(data) {};
+};
+
+union RGBA8
+{
+	struct{u8 R, G, B, A;};
+	u32 RAW;
+
+	RGBA8(u32 data) : RAW(data) {};
+};
+
+union VDATA
+{
+	struct{ s32 x:11; s32 : 5; s32 y:11; s32 : 5;};
+	u32 RAW;
+
+	VDATA(u32 data) : RAW(data) {};
+};
 
 struct VEC3
 {
@@ -40,7 +60,7 @@ struct vectk
 	// Set vertex data
 	void SetV(u32 data)
 	{
-		VDATA z; z.RAW = data;
+		VDATA z(data);
 		x = z.x;
 		y = z.y;
 	}

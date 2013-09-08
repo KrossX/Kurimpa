@@ -32,8 +32,8 @@ s8 DitherMatrix[4][4] =
 
 static inline u32 ModulateTex(u32 color, u16 texel)
 {
-	RGBA5551 t; t.RAW = texel;
-	RGBA8 c; c.RAW = color;
+	RGBA5551 t(texel);
+	RGBA8 c(color);
 
 	u16 Cr = (c.R * t.R) >> 4;
 	u16 Cg = (c.G * t.G) >> 4;
@@ -48,33 +48,31 @@ static inline u32 ModulateTex(u32 color, u16 texel)
 
 static inline u16 GetPix16(u32 in)
 {
-	RGBA8 pin; pin.RAW = in;
+	RGBA8 pin(in);
 
-	RGBA5551 pix16;
+	RGBA5551 pix16(0);
 	pix16.R = pin.R >> 3;
 	pix16.G = pin.G >> 3;
 	pix16.B = pin.B >> 3;
-	pix16.A = 0;
 
 	return pix16.RAW;
 }
 
 static inline u32 GetPix24(u16 in)
 {
-	RGBA5551 pin; pin.RAW = in;
+	RGBA5551 pin(in);
 
-	RGBA8 pix32;
+	RGBA8 pix32(0);
 	pix32.R = (pin.R * 0xFF) / 0x1F;
 	pix32.G = (pin.G * 0xFF) / 0x1F;
 	pix32.B = (pin.B * 0xFF) / 0x1F;
-	pix32.A = 0;
 
 	return pix32.RAW;
 }
 
 static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
 {
-	RGBA8 pin; pin.RAW = in;
+	RGBA8 pin(in);
 
 	s8 offset = DitherMatrix[posx % 4][posy % 4];
 
@@ -82,9 +80,9 @@ static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
 	s16 G = pin.G + offset;
 	s16 B = pin.B + offset;
 
-	pin.R = (R > 0xFF ? 0xFF : R < 0 ? 0 : R) & 0xFF;
-	pin.G = (G > 0xFF ? 0xFF : G < 0 ? 0 : G) & 0xFF;
-	pin.B = (B > 0xFF ? 0xFF : B < 0 ? 0 : B) & 0xFF;
+	pin.R = R > 0xFF ? 0xFF : R < 0 ? 0 : R;
+	pin.G = G > 0xFF ? 0xFF : G < 0 ? 0 : G;
+	pin.B = B > 0xFF ? 0xFF : B < 0 ? 0 : B;
 
 	return GetPix16(pin.RAW);
 }
@@ -94,9 +92,7 @@ static inline VEC3 GetColorDiff(u32 c1, u32 c2, int len)
 	if(!len) return VEC3();
 
 	VEC3 out;
-	RGBA8 C1, C2;
-	C1.RAW = c1;
-	C2.RAW = c2;
+	RGBA8 C1(c1), C2(c2);
 
 	out.R = (C2.R - C1.R) / (float)len;
 	out.G = (C2.G - C1.G) / (float)len;
@@ -107,7 +103,7 @@ static inline VEC3 GetColorDiff(u32 c1, u32 c2, int len)
 
 static inline u32 GetColorGrad(u32 c0, VEC3 diff, int i)
 {
-	RGBA8 C0; C0.RAW = c0;
+	RGBA8 C0(c0);
 
 	C0.R += (u8)(diff.R * i);
 	C0.G += (u8)(diff.G * i);
@@ -118,9 +114,7 @@ static inline u32 GetColorGrad(u32 c0, VEC3 diff, int i)
 
 static inline u32 GetColorBlend3(vectk &v0, vectk &v1, vectk &v2, float s, float t)
 {
-	RGBA8 C0; C0.RAW = v0.c;
-	RGBA8 C1; C1.RAW = v1.c;
-	RGBA8 C2; C2.RAW = v2.c;
+	RGBA8 C0(v0.c), C1(v1.c), C2(v2.c);
 
 	C0.R = (u8)(C0.R * (1.0f - (s+t)) + C1.R * s + C2.R * t);
 	C0.G = (u8)(C0.G * (1.0f - (s+t)) + C1.G * s + C2.G * t);

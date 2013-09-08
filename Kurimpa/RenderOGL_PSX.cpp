@@ -418,7 +418,7 @@ void RenderOGL_PSX::TakeVRAMshot()
 		{
 			u32 pos = x+ y * 1024;
 			u16 *vram = (u16*)psx.vram;
-			RGBA5551 pix16; pix16.RAW = vram[pos];
+			RGBA5551 pix16(vram[pos]);
 
 			pos = (x + (511 - y) * 1024) * 3;
 
