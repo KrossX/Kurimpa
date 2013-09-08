@@ -112,29 +112,15 @@ static inline u32 GetColorGrad(u32 c0, VEC3 diff, int i)
 	return C0.RAW;
 }
 
-static inline u32 GetColorBlend3(vectk &v0, vectk &v1, vectk &v2, float s, float t)
+static inline u32 GetColorBlend3(vectk *v, float s, float t)
 {
-	RGBA8 C0(v0.c), C1(v1.c), C2(v2.c);
+	RGBA8 C0(v[0].c), C1(v[1].c), C2(v[2].c);
 
 	C0.R = (u8)(C0.R * (1.0f - (s+t)) + C1.R * s + C2.R * t);
 	C0.G = (u8)(C0.G * (1.0f - (s+t)) + C1.G * s + C2.G * t);
 	C0.B = (u8)(C0.B * (1.0f - (s+t)) + C1.B * s + C2.B * t);
 
 	return C0.RAW;
-}
-
-static inline u16 GetTexCoord3(vectk &v0, vectk &v1, vectk &v2, float s, float t)
-{
-	Half out;
-
-	float st = 1.0f - s - t;
-	float u = v0.u * st + v1.u * s + v2.u * t + 0.5f;
-	float v = v0.v * st + v1.v * s + v2.v * t + 0.5f;
-
-	out.U8[0] = (u8)u;
-	out.U8[1] = (u8)v;
-
-	return out.U16;
 }
 
 static inline void ClampMax(s16 &r, s16 &g, s16 &b, s16 max)
@@ -255,6 +241,15 @@ u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
 	return color.U16;
 }
 
+u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t)
+{
+	float st = 1.0f - s - t;
+	float U = v[0].u * st + v[1].u * s + v[2].u * t + 0.5f;
+	float V = v[0].v * st + v[1].v * s + v[2].v * t + 0.5f;
+	
+	return GetTexel((u8)U, (u8)V);
+}
+
 void RasterPSXSW::RasterLine(RENDERTYPE render_mode)
 {
 	//  THE EXTREMELY FAST LINE ALGORITHM (B)
@@ -264,6 +259,8 @@ void RasterPSXSW::RasterLine(RENDERTYPE render_mode)
 	int incrementVal;
 	int shortLen = vertex[1].y - vertex[0].y;
 	int longLen = vertex[1].x - vertex[0].x;
+
+	if(longLen > 1023 || shortLen > 511) return;
 
 	if(!shortLen) shortLen = 1;
 	if(!longLen) longLen = 1;
@@ -312,12 +309,6 @@ float crossProduct(vectk &a, vectk &b)
 
 void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 {
-	vectk vs1, vs2, temp;
-	vs1.x = vertex[1].x - vertex[0].x;
-	vs1.y = vertex[1].y - vertex[0].y;
-	vs2.x = vertex[2].x - vertex[0].x;
-	vs2.y = vertex[2].y - vertex[0].y;
-
 	s16 minX = min(min(vertex[0].x, vertex[1].x), vertex[2].x);
 	s16 maxX = max(max(vertex[0].x, vertex[1].x), vertex[2].x);
 	s16 minY = min(min(vertex[0].y, vertex[1].y), vertex[2].y);
@@ -331,10 +322,15 @@ void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 	if(minX == maxX) maxX++;
 	if(minY == maxY) maxY++;
 
+	vectk vs1, vs2, temp;
+	vs1.x = vertex[1].x - vertex[0].x;
+	vs1.y = vertex[1].y - vertex[0].y;
+	vs2.x = vertex[2].x - vertex[0].x;
+	vs2.y = vertex[2].y - vertex[0].y;
+
 	float cross = crossProduct(vs2, vs1);
 	if(!cross) return;
 
-	Half tx;
 	u16 texel;
 	s16 x, y;
 
@@ -344,98 +340,74 @@ void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 	{
 	case RENDER_FLAT:
 		for (y = minY; y < maxY; y++)
+		for (x = minX; x < maxX; x++)
 		{
 			temp.y = y - vertex[0].y;
+			temp.x = x - vertex[0].x;
 
-			for (x = minX; x < maxX; x++)
+			s = crossProduct(temp, vs2) / -cross;
+			t = crossProduct(temp, vs1) /  cross;
+
+			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
 			{
-				temp.x = x - vertex[0].x;
-
-				s = crossProduct(temp, vs2) / -cross;
-				if((s < 0) || (s > 1)) continue;
-
-				t = crossProduct(temp, vs1) /  cross;
-
-				if((t >= 0) && ((s + t) <= 1))
-				{
-					SetPixel(vertex[0].c, x, y);
-				}
+				SetPixel(vertex[0].c, x, y);
 			}
 		}
 		break;
 
 	case RENDER_TEXTURED:
 		for (y = minY; y < maxY; y++)
+		for (x = minX; x < maxX; x++)
 		{
 			temp.y = y - vertex[0].y;
+			temp.x = x - vertex[0].x;
 
-			for (x = minX; x < maxX; x++)
-			{
-				temp.x = x - vertex[0].x;
+			s = crossProduct(temp, vs2) / -cross;
+			t = crossProduct(temp, vs1) /  cross;
 
-				s = crossProduct(temp, vs2) / -cross;
-				if((s < 0) || (s > 1)) continue;
+			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
+			{ 
+				texel = GetTexel3(vertex, s, t);
 
-				t = crossProduct(temp, vs1) /  cross;
-
-				if((t >= 0) && ((s + t) <= 1))
-				{ 
-					tx.U16 = GetTexCoord3(vertex[0], vertex[1], vertex[2], s, t);
-					texel = GetTexel(tx.U8[0], tx.U8[1]);
-
-					if(texel)
-						SetPixel(vertex[0].c, x, y, texel);
-				}
+				if(texel)
+					SetPixel(vertex[0].c, x, y, texel);
 			}
 		}
 		break;
 
 	case RENDER_SHADED:
 		for (y = minY; y < maxY; y++)
+		for (x = minX; x < maxX; x++)
 		{
 			temp.y = y - vertex[0].y;
-
-			for (x = minX; x < maxX; x++)
-			{
-				temp.x = x - vertex[0].x;
+			temp.x = x - vertex[0].x;
 				
-				s = crossProduct(temp, vs2) / -cross;
-				if((s < 0) || (s > 1)) continue;
+			s = crossProduct(temp, vs2) / -cross;
+			t = crossProduct(temp, vs1) /  cross;
 
-				t = crossProduct(temp, vs1) /  cross;
-
-				if((t >= 0) && ((s + t) <= 1))
-				{ 
-					SetPixel(GetColorBlend3(vertex[0], vertex[1], vertex[2], s, t), x, y);
-				}
+			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
+			{ 
+				SetPixel(GetColorBlend3(vertex, s, t), x, y);
 			}
 		}
 		break;
 
 	case RENDER_SHADED_TEXTURED:
 		for (y = minY; y < maxY; y++)
+		for (x = minX; x < maxX; x++)
 		{
 			temp.y = y - vertex[0].y;
+			temp.x = x - vertex[0].x;
 
-			for (x = minX; x < maxX; x++)
-			{
-				temp.x = x - vertex[0].x;
+			s = crossProduct(temp, vs2) / -cross;
+			t = crossProduct(temp, vs1) /  cross;
 
-				s = crossProduct(temp, vs2) / -cross;
-				if((s < 0) || (s > 1)) continue;
-
-				t = crossProduct(temp, vs1) /  cross;
-
-				if((t >= 0) && ((s + t) <= 1))
-				{ 
-					tx.U16 = GetTexCoord3(vertex[0], vertex[1], vertex[2], s, t);
-					texel = GetTexel(tx.U8[0], tx.U8[1]);
-
-					u32 color = Drawing.doModulate ? GetColorBlend3(vertex[0], vertex[1], vertex[2], s, t) : 0;
-
-					if(texel)
-						SetPixel(color, x, y, texel);
-				}
+			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
+			{ 
+				texel = GetTexel3(vertex, s, t);
+				
+				if(texel)
+					SetPixel(GetColorBlend3(vertex, s, t), x, y, texel);
 			}
 		}
 		break;
