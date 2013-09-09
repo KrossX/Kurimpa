@@ -7,14 +7,14 @@ namespace shaders
 		"precision highp int;\n";
 
 	char fb_vertex[] =
-		"in vec3 QuadPos;\n" \
+		"in vec2 QuadPos;\n" \
 		"in vec2 QuadUV;\n" \
 
 		"out vec2 pos_fb;\n" \
 
 		"void main()\n" \
 		"{\n" \
-		"	gl_Position = vec4(QuadPos, 1);\n" \
+		"	gl_Position = vec4(QuadPos, 0, 1);\n" \
 		"	pos_fb = QuadUV;\n" \
 		"}\n";
 

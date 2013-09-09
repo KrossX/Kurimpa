@@ -146,7 +146,8 @@ bool Backend_OpenGL::Init(HWND hWin)
 	}
 
 	hWindow = hWin;
-	oldstyle = GetWindowLong(hWin, GWL_STYLE);
+	oldstyle   = GetWindowLong(hWin, GWL_STYLE);
+	oldstyleEx = GetWindowLong(hWin, GWL_EXSTYLE);
 	
 	oldrect.top = 200;
 	oldrect.left = 200;
@@ -189,18 +190,24 @@ void Backend_OpenGL::SetAspectRatio(float ratio)
 	UpdateScreenAspect();
 }
 
-
 void Backend_OpenGL::SetFullscreen()
 {
 	scwidth = GetSystemMetrics(SM_CXSCREEN);
 	scheight = GetSystemMetrics(SM_CYSCREEN);
 	
 	GetWindowRect(hWindow, &oldrect);
-	LONG newstyle = oldstyle & ~(WS_CAPTION | WS_BORDER);
+	oldstyle   = GetWindowLong(hWindow, GWL_STYLE);
+	oldstyleEx = GetWindowLong(hWindow, GWL_EXSTYLE);
+
+	LONG newstyle   = oldstyle & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
+	LONG newstyleEx = oldstyle & ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
 
 	UpdateScreenAspect();
 	SetWindowLong(hWindow, GWL_STYLE, newstyle);
-	SetWindowPos(hWindow, HWND_TOPMOST, 0, 0, scwidth, scheight, 0);
+	SetWindowLong(hWindow, GWL_EXSTYLE, newstyleEx);
+	SetWindowPos(hWindow, HWND_TOPMOST, 0, 0, scwidth, scheight, SWP_ASYNCWINDOWPOS);
+
+	ShowCursor(FALSE);
 }
 
 void Backend_OpenGL::SetWindowed(int width, int height)
@@ -213,13 +220,16 @@ void Backend_OpenGL::SetWindowed(int width, int height)
 	size.left = 0; size.right = width;
 
 	SetWindowLong(hWindow, GWL_STYLE, oldstyle);
+	SetWindowLong(hWindow, GWL_EXSTYLE, oldstyleEx);
 	AdjustWindowRect(&size, oldstyle, FALSE);
 
 	width = size.right - size.left;
 	height = size.bottom - size.top;
 
 	UpdateScreenAspect();
-	SetWindowPos(hWindow, HWND_TOP, oldrect.left, oldrect.top, width, height, 0);
+	SetWindowPos(hWindow, HWND_TOP, oldrect.left, oldrect.top, width, height, SWP_ASYNCWINDOWPOS);
+
+	ShowCursor(TRUE);
 }
 
 //---------------------------------------------------------------[FRAMEBUFFER]
@@ -267,15 +277,15 @@ bool Backend_OpenGL::InitFramebuffer(int width, int height)
 }
 
 // An array of 3 vectors which represents 3 vertices
-static const GLfloat g_vertex_quad[] = 
+static const float g_vertex_quad[] = 
 {
-   -1.0f, -1.0f, 0.0f,
-   -1.0f,  1.0f, 0.0f,
-    1.0f, -1.0f, 0.0f,
-    1.0f,  1.0f, 0.0f,
+   -1.0f, -1.0f,
+   -1.0f,  1.0f,
+    1.0f, -1.0f,
+    1.0f,  1.0f,
 };
 
-static const GLfloat g_uv_quad[] = 
+static const float g_uv_quad[] = 
 {
    0.0f, 0.0f,
    0.0f, 1.0f,
@@ -291,7 +301,7 @@ bool Backend_OpenGL::PrepareDisplayQuad()
 	glGenBuffers(1, &quadvb);
 	glBindBuffer(GL_ARRAY_BUFFER, quadvb);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_quad), g_vertex_quad, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &quaduv);

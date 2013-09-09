@@ -65,7 +65,7 @@ class Backend_OpenGL
 	float aspectr; // Desired aspect ratio;
 	RECT viewport; // Viewport size, padding (aspect ratio)
 	RECT oldrect;
-	LONG oldstyle;
+	LONG oldstyle, oldstyleEx;
 	int scwidth, scheight; // Screensize
 
 	HGLRC hTempGLCtx;   // Temporal OpenGL Context

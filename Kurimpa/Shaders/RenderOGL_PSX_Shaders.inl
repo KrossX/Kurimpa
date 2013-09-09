@@ -11,7 +11,7 @@ namespace shader
 		"precision highp float;\n" \
 		"precision highp int;\n" \
 
-		"in vec3 QuadPos;\n" \
+		"in vec2 QuadPos;\n" \
 		"in vec2 QuadUV;\n" \
 
 		"#ifdef VIEW_VRAM\n" \
@@ -25,7 +25,7 @@ namespace shader
 
 		"void main()\n" \
 		"{\n" \
-		"	gl_Position = vec4(QuadPos, 1);\n" \
+		"	gl_Position = vec4(QuadPos, 0, 1);\n" \
 		"	vec2 newUV = vec2(QuadUV.x, 1.0 - QuadUV.y);\n" \
 
 		"#ifdef VIEW_VRAM\n" \
