@@ -60,7 +60,7 @@ namespace shader
 
 		"	uint value, color0, color1, color2;\n" \
 
-		"	int curpix = ipos.x % 2;\n" \
+		"	int curpix = ipos.x & 1;\n" \
 
 		"	if(curpix == 0)\n" \
 		"	{\n" \

@@ -21,12 +21,11 @@
 #include "RasterPSX.h"
 #include <cmath>
 
-
 s8 DitherMatrix[4][4] =
 {
-	{-4,  0, -3, +1}, // First two scanlines
-	{+2, -2, +3, -1}, 
-	{-3, +1, -4,  0}, // other two scanlines
+	{-4,  0, -3, +1},
+	{+2, -2, +3, -1},
+	{-3, +1, -4,  0},
 	{+3, -1, +2, -2}
 };
 
@@ -74,7 +73,7 @@ static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
 {
 	RGBA8 pin(in);
 
-	s8 offset = DitherMatrix[posx % 4][posy % 4];
+	s8 offset = DitherMatrix[posy&3][posx&3];
 
 	s16 R = pin.R + offset;
 	s16 G = pin.G + offset;
@@ -116,95 +115,101 @@ static inline u32 GetColorBlend3(vectk *v, float s, float t)
 {
 	RGBA8 C0(v[0].c), C1(v[1].c), C2(v[2].c);
 
-	C0.R = (u8)(C0.R * (1.0f - (s+t)) + C1.R * s + C2.R * t);
-	C0.G = (u8)(C0.G * (1.0f - (s+t)) + C1.G * s + C2.G * t);
-	C0.B = (u8)(C0.B * (1.0f - (s+t)) + C1.B * s + C2.B * t);
+	const float st = 1.0f - (s+t);
+
+	C0.R = (u8)(C0.R * st + C1.R * s + C2.R * t);
+	C0.G = (u8)(C0.G * st + C1.G * s + C2.G * t);
+	C0.B = (u8)(C0.B * st + C1.B * s + C2.B * t);
 
 	return C0.RAW;
 }
 
-static inline void ClampMax(s16 &r, s16 &g, s16 &b, s16 max)
+template<s16 max>
+static inline void ClampMax(s16 *col)
 {
-	r = r > 0x1F ? 0x1F : r;
-	g = g > 0x1F ? 0x1F : g;
-	b = b > 0x1F ? 0x1F : b;
+	if(col[0] > max) col[0] = max;
+	if(col[1] > max) col[1] = max;
+	if(col[2] > max) col[2] = max;
 }
 
-static inline void ClampMin(s16 &r, s16 &g, s16 &b, s16 max)
+template<s16 min>
+static inline void ClampMin(s16 *col)
 {
-	r = r < 0 ? 0 : r;
-	g = g < 0 ? 0 : g;
-	b = b < 0 ? 0 : b;
+	if(col[0] < min) col[0] = min;
+	if(col[1] < min) col[1] = min;
+	if(col[2] < min) col[2] = min;
 }
 
 inline u16 RasterPSXSW::Blend(u16 &back, u16 &front)
 {
-	s16 Br, Bg, Bb;
-	s16 Fr, Fg, Fb;
+	s16 B[3] = {back & 0x1F, (back >> 5) & 0x1F, (back >> 10) & 0x1F};
+	s16 F[3] = {front & 0x1F, (front >> 5) & 0x1F, (front >> 10) & 0x1F};
 
-	Br = back & 0x1F;
-	Bg = (back >> 5) & 0x1F;
-	Bb = (back >> 10) & 0x1F;
-
-	Fr = front & 0x1F;
-	Fg = (front >> 5) & 0x1F;
-	Fb = (front >> 10) & 0x1F;
 
 	switch(GPUSTAT->BLENDEQ)
 	{
 	case 0:
-		Fr = (Br + Fr) >> 1;
-		Fg = (Bg + Fg) >> 1;
-		Fb = (Bb + Fb) >> 1;
+		F[0] = (B[0] + F[0]) >> 1;
+		F[1] = (B[1] + F[1]) >> 1;
+		F[2] = (B[2] + F[2]) >> 1;
 		break;
 		
 	case 1:
-		Fr = Br + Fr;
-		Fg = Bg + Fg;
-		Fb = Bb + Fb;
-		ClampMax(Fr, Fg, Fb, 0x1F);
+		F[0] = B[0] + F[0];
+		F[1] = B[1] + F[1];
+		F[2] = B[2] + F[2];
+		ClampMax<0x1F>(F);
 		break;
 		
 	case 2:
-		Fr = Br - Fr;
-		Fg = Bg - Fg;
-		Fb = Bb - Fb;
-		ClampMin(Fr, Fg, Fb, 0x00);
+		F[0] = B[0] - F[0];
+		F[1] = B[1] - F[1];
+		F[2] = B[2] - F[2];
+		ClampMin<0x00>(F);
 		break;
 
 	case 3:
-		Fr = Br + (Fr >> 2);
-		Fg = Bg + (Fg >> 2);
-		Fb = Bb + (Fb >> 2);
-		ClampMax(Fr, Fg, Fb, 0x1F);
+		F[0] = B[0] + (F[0] >> 2);
+		F[1] = B[1] + (F[1] >> 2);
+		F[2] = B[2] + (F[2] >> 2);
+		ClampMax<0x1F>(F);
 		break;
 	}
 
-	u16 out = Fr | (Fg << 5) | (Fb << 10);
+	u16 out = F[0] | (F[1] << 5) | (F[2] << 10);
 	return out;
 }
 
-void RasterPSXSW::SetPixel(u32 color, s16 x, s16 y, u16 texel = 0)
+template<bool textured>
+inline void RasterPSXSW::SetPixel(u32 color, s16 x, s16 y, u16 texel)
 {
-	DA->ApplyOffset(x, y);
 	if(DA->ScissorTest(x, y)) return;
 
-	u16 frontcolor, backcolor = VRAM->HALF2[y][x];
+	u16 frontcolor, &backcolor = VRAM->HALF2[y][x];
 	if(doMaskCheck(backcolor)) return;
 
-	bool texMasked = !!(texel & 0x8000);
-	bool doBlend = Drawing.isBlendEnabled && (!Drawing.isTextured || (Drawing.isTextured && texMasked));
-	bool doMask = Drawing.isMaskForced || texMasked;
+	u16 texmask = texel & 0x8000;
 	
-	if(Drawing.isTextured)
-		color = Drawing.doModulate? ModulateTex(color, texel) : GetPix24(texel);
+	if(textured)
+	{
+		if(Drawing.doModulate)
+			color = ModulateTex(color, texel);
+		else 
+			color = GetPix24(texel);
+	}
 
-	frontcolor = Drawing.doDither? GetPix16Dither(color, x, y) : GetPix16(color);
+	if(Drawing.doDither)
+		frontcolor = GetPix16Dither(color, x, y);
+	else
+		frontcolor = GetPix16(color);
 	
-	if(doBlend)
-		frontcolor = Blend(backcolor, frontcolor);
+	if(Drawing.isBlendEnabled)
+	{
+		if(!textured || (textured && texmask > 0))
+			frontcolor = Blend(backcolor, frontcolor);
+	}
 
-	VRAM->HALF2[y][x] = doMask ? frontcolor | 0x8000 : frontcolor;
+	backcolor = frontcolor | GPUSTAT->MASK | texmask;
 }
 
 u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
@@ -218,27 +223,25 @@ u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
 	case 0: // 4 bits
 		color.U16 = TW->PAGE[(ty << 10) + (tx >> 2)];
 
-		switch(tx % 4)
+		switch(tx & 3)
 		{
-		case 0: color.U16 = TW->CLUT[color.U8[0] & 0xF]; break;
-		case 1: color.U16 = TW->CLUT[(color.U8[0] >> 4) & 0xF]; break;
-		case 2: color.U16 = TW->CLUT[color.U8[1] & 0xF]; break;
-		case 3: color.U16 = TW->CLUT[(color.U8[1] >> 4) & 0xF]; break;
+		case 0: return TW->CLUT[color.U8[0] & 0xF];
+		case 1: return TW->CLUT[(color.U8[0] >> 4) & 0xF];
+		case 2: return TW->CLUT[color.U8[1] & 0xF];
+		case 3: return TW->CLUT[(color.U8[1] >> 4) & 0xF];
 		}
 		break;
 
 	case 1: // 8 bits
 		color.U16 = TW->PAGE[(ty << 10) + (tx >> 1)];
-		color.U16 = TW->CLUT[tx % 2 ? color.U8[1] : color.U8[0]];
-		break;
+		return TW->CLUT[color.U8[tx&1]];
 
 	case 2: // 15 bits
 	case 3: // Reserved... also 15 bits?
-		color.U16 = TW->PAGE[(ty << 10) + tx];
-		break;
+		return TW->PAGE[(ty << 10) + tx];
 	}
 
-	return color.U16;
+	return 0;
 }
 
 u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t)
@@ -282,133 +285,226 @@ void RasterPSXSW::RasterLine(RENDERTYPE render_mode)
 
 		if (yLonger) for (int i=0; i!=longLen; i+=incrementVal)
 		{
-			SetPixel(GetColorGrad(vertex[0].c, cdiff, i), vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i);
+			SetPixel<false>(GetColorGrad(vertex[0].c, cdiff, i), vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i, 0);
 		}
 		else for (int i=0; i!=longLen; i+=incrementVal)
 		{
-			SetPixel(GetColorGrad(vertex[0].c, cdiff, i),  vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff));
+			SetPixel<false>(GetColorGrad(vertex[0].c, cdiff, i),  vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff), 0);
 		}
 	}
 	else
 	{
 		if (yLonger) for (int i=0; i!=longLen; i+=incrementVal)
 		{
-			SetPixel(vertex[0].c, vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i);
+			SetPixel<false>(vertex[0].c, vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i, 0);
 		}
 		else for (int i=0; i!=longLen; i+=incrementVal)
 		{
-			SetPixel(vertex[0].c, vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff));
+			SetPixel<false>(vertex[0].c, vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff), 0);
 		}
 	}
 }
 
-float crossProduct(vectk &a, vectk &b)
-{
-	return (float)((a.x * b.y) - (a.y * b.x));
-}
+// Copy-pasted from Nick's optimized raster 
+// http://devmaster.net/posts/6145/advanced-rasterization
 
 void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 {
-	s16 minX = min(min(vertex[0].x, vertex[1].x), vertex[2].x);
-	s16 maxX = max(max(vertex[0].x, vertex[1].x), vertex[2].x);
-	s16 minY = min(min(vertex[0].y, vertex[1].y), vertex[2].y);
-	s16 maxY = max(max(vertex[0].y, vertex[1].y), vertex[2].y);
+	s16 minx = min(min(vertex[0].x, vertex[1].x), vertex[2].x);
+	s16 maxx = max(max(vertex[0].x, vertex[1].x), vertex[2].x);
+	s16 miny = min(min(vertex[0].y, vertex[1].y), vertex[2].y);
+	s16 maxy = max(max(vertex[0].y, vertex[1].y), vertex[2].y);
 
-	if((maxX - minX) > 1023) return;
-	if((maxY - minY) > 511) return;
+	const u16 width  = maxx - minx;
+	const u16 height = maxy - miny;
 
-	DA->PolyAreaClip(minX, maxX, minY, maxY);
+	if(width > 1023) return;
+	if(height > 511) return;
 
-	if(minX == maxX) maxX++;
-	if(minY == maxY) maxY++;
+	DA->PolyAreaClip(minx, maxx, miny, maxy);
 
-	vectk vs1, vs2, temp;
-	vs1.x = vertex[1].x - vertex[0].x;
-	vs1.y = vertex[1].y - vertex[0].y;
-	vs2.x = vertex[2].x - vertex[0].x;
-	vs2.y = vertex[2].y - vertex[0].y;
+	const int STDX1 = vertex[1].x - vertex[0].x;
+	const int STDX2 = vertex[2].x - vertex[0].x;
+	const int STDY1 = vertex[1].y - vertex[0].y;
+	const int STDY2 = vertex[2].y - vertex[0].y;
 
-	float cross = crossProduct(vs2, vs1);
-	if(!cross) return;
+	const int CROSS = (STDX2 * STDY1) - (STDY2 * STDX1);
+	if(!CROSS) return;
+
+	const int CSDYX = vertex[0].y * STDX2 - vertex[0].x * STDY2;
+	const int CTDYX = vertex[0].y * STDX1 - vertex[0].x * STDY1;
+
+	const float CSY = (float)STDY2 / -CROSS;
+	const float CSX = (float)STDX2 / -CROSS;
+	const float CS  = (float)CSDYX / -CROSS;
+
+	const float CTY = (float)STDY1 /  CROSS;
+	const float CTX = (float)STDX1 /  CROSS;
+	const float CT  = (float)CTDYX /  CROSS;
 
 	u16 texel;
-	s16 x, y;
-
 	float s, t;
+
+	u8 iA = 0, iB = 1, iC = 2;
+	if(CROSS < 0) { iA = 2; iC = 0; }
+
+	// 28.4 fixed-point coordinates
+	const int Y1 = vertex[iA].y << 4;
+	const int Y2 = vertex[iB].y << 4;
+	const int Y3 = vertex[iC].y << 4;
+
+	const int X1 = vertex[iA].x << 4;
+	const int X2 = vertex[iB].x << 4;
+	const int X3 = vertex[iC].x << 4;
+
+	// Deltas
+	const int DX12 = X1 - X2;
+	const int DX23 = X2 - X3;
+	const int DX31 = X3 - X1;
+
+	const int DY12 = Y1 - Y2;
+	const int DY23 = Y2 - Y3;
+	const int DY31 = Y3 - Y1;
+
+	// Fixed-point deltas
+	const int FDX12 = DX12 << 4;
+	const int FDX23 = DX23 << 4;
+	const int FDX31 = DX31 << 4;
+
+	const int FDY12 = DY12 << 4;
+	const int FDY23 = DY23 << 4;
+	const int FDY31 = DY31 << 4;
+
+	// Half-edge constants
+	int C1 = DY12 * X1 - DX12 * Y1;
+	int C2 = DY23 * X2 - DX23 * Y2;
+	int C3 = DY31 * X3 - DX31 * Y3;
+
+	// Correct for fill convention
+	if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
+	if(DY23 < 0 || (DY23 == 0 && DX23 > 0)) C2++;
+	if(DY31 < 0 || (DY31 == 0 && DX31 > 0)) C3++;
+
+	int CY1 = C1 + DX12 * (miny << 4) - DY12 * (minx << 4);
+	int CY2 = C2 + DX23 * (miny << 4) - DY23 * (minx << 4);
+	int CY3 = C3 + DX31 * (miny << 4) - DY31 * (minx << 4);
+
+	int CX1, CX2, CX3;
 
 	switch(render_mode)
 	{
 	case RENDER_FLAT:
-		for (y = minY; y < maxY; y++)
-		for (x = minX; x < maxX; x++)
+		for(s16 y = miny; y < maxy; y++)
 		{
-			temp.y = y - vertex[0].y;
-			temp.x = x - vertex[0].x;
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
 
-			s = crossProduct(temp, vs2) / -cross;
-			t = crossProduct(temp, vs1) /  cross;
-
-			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
+			for(s16 x = minx; x < maxx; x++)
 			{
-				SetPixel(vertex[0].c, x, y);
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+				{
+					SetPixel<false>(vertex[0].c, x, y, 0);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY31;
 			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX31;
 		}
 		break;
 
 	case RENDER_TEXTURED:
-		for (y = minY; y < maxY; y++)
-		for (x = minX; x < maxX; x++)
+		for(s16 y = miny; y < maxy; y++)
 		{
-			temp.y = y - vertex[0].y;
-			temp.x = x - vertex[0].x;
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
 
-			s = crossProduct(temp, vs2) / -cross;
-			t = crossProduct(temp, vs1) /  cross;
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
 
-			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
-			{ 
-				texel = GetTexel3(vertex, s, t);
+				   texel = GetTexel3(vertex, s, t);
 
-				if(texel)
-					SetPixel(vertex[0].c, x, y, texel);
+					if(texel)
+						SetPixel<true>(vertex[0].c, x, y, texel);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY31;
 			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX31;
 		}
 		break;
 
 	case RENDER_SHADED:
-		for (y = minY; y < maxY; y++)
-		for (x = minX; x < maxX; x++)
+		for(s16 y = miny; y < maxy; y++)
 		{
-			temp.y = y - vertex[0].y;
-			temp.x = x - vertex[0].x;
-				
-			s = crossProduct(temp, vs2) / -cross;
-			t = crossProduct(temp, vs1) /  cross;
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
 
-			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
-			{ 
-				SetPixel(GetColorBlend3(vertex, s, t), x, y);
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
+
+				   SetPixel<false>(GetColorBlend3(vertex, s, t), x, y, 0);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY31;
 			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX31;
 		}
 		break;
 
 	case RENDER_SHADED_TEXTURED:
-		for (y = minY; y < maxY; y++)
-		for (x = minX; x < maxX; x++)
+		for(s16 y = miny; y < maxy; y++)
 		{
-			temp.y = y - vertex[0].y;
-			temp.x = x - vertex[0].x;
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
 
-			s = crossProduct(temp, vs2) / -cross;
-			t = crossProduct(temp, vs1) /  cross;
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
 
-			if((s >= 0) && (t >= 0) && ((s + t) <= 1))
-			{ 
-				texel = GetTexel3(vertex, s, t);
+					texel = GetTexel3(vertex, s, t);
 				
-				if(texel)
-					SetPixel(GetColorBlend3(vertex, s, t), x, y, texel);
+					if(texel)
+						SetPixel<true>(GetColorBlend3(vertex, s, t), x, y, texel);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY31;
 			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX31;
 		}
 		break;
 	}
@@ -416,6 +512,7 @@ void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 
 void RasterPSXSW::RasterPoly4(RENDERTYPE render_mode)
 {
+#if 1
 	RasterPoly3(render_mode);
 
 	if((render_mode == RENDER_FLAT) || (render_mode == RENDER_TEXTURED))
@@ -426,6 +523,227 @@ void RasterPSXSW::RasterPoly4(RENDERTYPE render_mode)
 	vertex[2] = vertex[3];
 
 	RasterPoly3(render_mode);
+#else
+	s16 minx = min(min(vertex[0].x, vertex[1].x), min(vertex[2].x, vertex[3].x));
+	s16 maxx = max(max(vertex[0].x, vertex[1].x), max(vertex[2].x, vertex[3].x));
+	s16 miny = min(min(vertex[0].y, vertex[1].y), min(vertex[2].y, vertex[3].y));
+	s16 maxy = max(max(vertex[0].y, vertex[1].y), max(vertex[2].y, vertex[3].y));
+
+	const u16 width  = maxx - minx;
+	const u16 height = maxy - miny;
+
+	if(width > 1023) return;
+	if(height > 511) return;
+
+	DA->PolyAreaClip(minx, maxx, miny, maxy);
+
+	const int STDX1 = vertex[1].x - vertex[0].x;
+	const int STDX2 = vertex[2].x - vertex[0].x;
+	const int STDY1 = vertex[1].y - vertex[0].y;
+	const int STDY2 = vertex[2].y - vertex[0].y;
+
+	const int CROSS = (STDX2 * STDY1) - (STDY2 * STDX1);
+	if(!CROSS) return;
+
+	const int CSDYX = vertex[0].y * STDX2 - vertex[0].x * STDY2;
+	const int CTDYX = vertex[0].y * STDX1 - vertex[0].x * STDY1;
+
+	const float CSY = (float)STDY2 / -CROSS;
+	const float CSX = (float)STDX2 / -CROSS;
+	const float CS  = (float)CSDYX / -CROSS;
+
+	const float CTY = (float)STDY1 /  CROSS;
+	const float CTX = (float)STDX1 /  CROSS;
+	const float CT  = (float)CTDYX /  CROSS;
+
+	u16 texel;
+	float s, t;
+
+	u8 iA = 0, iB = 2, iC = 3, iD = 1;
+	if(CROSS > 0) { iB = 1; iD = 2; }
+
+	// 28.4 fixed-point coordinates
+	const int Y1 = vertex[iA].y << 4;
+	const int Y2 = vertex[iB].y << 4;
+	const int Y3 = vertex[iC].y << 4;
+	const int Y4 = vertex[iD].y << 4;
+
+	const int X1 = vertex[iA].x << 4;
+	const int X2 = vertex[iB].x << 4;
+	const int X3 = vertex[iC].x << 4;
+	const int X4 = vertex[iD].x << 4;
+
+	// Deltas
+	const int DX12 = X1 - X2;
+	const int DX23 = X2 - X3;
+	const int DX34 = X3 - X4;
+	const int DX41 = X4 - X1;
+
+	const int DY12 = Y1 - Y2;
+	const int DY23 = Y2 - Y3;
+	const int DY34 = Y3 - Y4;
+	const int DY41 = Y4 - Y1;
+
+	// Fixed-point deltas
+	const int FDX12 = DX12 << 4;
+	const int FDX23 = DX23 << 4;
+	const int FDX34 = DX34 << 4;
+	const int FDX41 = DX41 << 4;
+
+	const int FDY12 = DY12 << 4;
+	const int FDY23 = DY23 << 4;
+	const int FDY34 = DY34 << 4;
+	const int FDY41 = DY41 << 4;
+
+	// Half-edge constants
+	int C1 = DY12 * X1 - DX12 * Y1;
+	int C2 = DY23 * X2 - DX23 * Y2;
+	int C3 = DY34 * X3 - DX34 * Y3;
+	int C4 = DY41 * X4 - DX41 * Y4;
+
+	// Correct for fill convention
+	if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
+	if(DY23 < 0 || (DY23 == 0 && DX23 > 0)) C2++;
+	if(DY34 < 0 || (DY34 == 0 && DX34 > 0)) C3++;
+	if(DY41 < 0 || (DY41 == 0 && DX41 > 0)) C4++;
+
+	int CY1 = C1 + DX12 * (miny << 4) - DY12 * (minx << 4);
+	int CY2 = C2 + DX23 * (miny << 4) - DY23 * (minx << 4);
+	int CY3 = C3 + DX34 * (miny << 4) - DY34 * (minx << 4);
+	int CY4 = C4 + DX41 * (miny << 4) - DY41 * (minx << 4);
+
+	int CX1, CX2, CX3, CX4;
+
+	switch(render_mode)
+	{
+	case RENDER_FLAT:
+		for(s16 y = miny; y < maxy; y++)
+		{
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
+			CX4 = CY4;
+
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0 && CX4 > 0)
+				{
+					SetPixel<false>(vertex[0].c, x, y, 0);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY34;
+				CX4 -= FDY41;
+			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX34;
+			CY4 += FDX41;
+		}
+		break;
+
+	case RENDER_TEXTURED:
+		for(s16 y = miny; y < maxy; y++)
+		{
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
+			CX4 = CY4;
+
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0 && CX4 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
+
+				   texel = GetTexel3(vertex, s, t);
+
+					if(texel)
+						SetPixel<true>(vertex[0].c, x, y, texel);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY34;
+				CX4 -= FDY41;
+			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX34;
+			CY4 += FDX41;
+		}
+		break;
+
+	case RENDER_SHADED:
+		for(s16 y = miny; y < maxy; y++)
+		{
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
+			CX4 = CY4;
+
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0 && CX4 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
+
+				   SetPixel<false>(GetColorBlend3(vertex, s, t), x, y, 0);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY34;
+				CX4 -= FDY41;
+			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX34;
+			CY4 += FDX41;
+		}
+		break;
+
+	case RENDER_SHADED_TEXTURED:
+		for(s16 y = miny; y < maxy; y++)
+		{
+			CX1 = CY1;
+			CX2 = CY2;
+			CX3 = CY3;
+			CX4 = CY4;
+
+			for(s16 x = minx; x < maxx; x++)
+			{
+				if(CX1 > 0 && CX2 > 0 && CX3 > 0 && CX4 > 0)
+				{
+					s = x * CSY - y * CSX + CS;
+					t = x * CTY - y * CTX + CT;
+
+					texel = GetTexel3(vertex, s, t);
+				
+					if(texel)
+						SetPixel<true>(GetColorBlend3(vertex, s, t), x, y, texel);
+				}
+
+				CX1 -= FDY12;
+				CX2 -= FDY23;
+				CX3 -= FDY34;
+				CX4 -= FDY41;
+			}
+
+			CY1 += FDX12;
+			CY2 += FDX23;
+			CY3 += FDX34;
+			CY4 += FDX41;
+		}
+		break;
+	}
+#endif
 }
 
 void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
@@ -450,14 +768,14 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 				u16 texel = GetTexel(tx, ty);
 
 				if(texel)
-					SetPixel(vertex[0].c, x, y, texel);
+					SetPixel<true>(vertex[0].c, x, y, texel);
 			}
 		}
 		else
 		{
 			for(y = ymin; y < ymax; y++)
 			for(x = xmin; x < xmax; x++)
-				SetPixel(vertex[0].c, x, y);
+				SetPixel<false>(vertex[0].c, x, y, 0);
 		}
 		break;
 
@@ -467,11 +785,11 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 			u16 texel = GetTexel(vertex[0].u, vertex[0].v);
 
 			if(texel)
-				SetPixel(vertex[0].c, vertex[0].x, vertex[0].y, texel);
+				SetPixel<true>(vertex[0].c, vertex[0].x, vertex[0].y, texel);
 		}
 		else
 		{
-			SetPixel(vertex[0].c, vertex[0].x, vertex[0].y);
+			SetPixel<false>(vertex[0].c, vertex[0].x, vertex[0].y, 0);
 		}
 		break;
 
@@ -487,7 +805,7 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 				u16 texel = GetTexel(tx, ty);
 
 				if(texel)
-					SetPixel(vertex[0].c, x, y, texel);
+					SetPixel<true>(vertex[0].c, x, y, texel);
 			}
 		}
 		else
@@ -497,7 +815,7 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 
 			for(y = ymin; y < ymax; y++)
 			for(x = xmin; x < xmax; x++)
-				SetPixel(vertex[0].c, x, y);
+				SetPixel<false>(vertex[0].c, x, y, 0);
 		}
 		break;
 
@@ -513,7 +831,7 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 				u16 texel = GetTexel(tx, ty);
 
 				if(texel)
-					SetPixel(vertex[0].c, x, y, texel);
+					SetPixel<true>(vertex[0].c, x, y, texel);
 			}
 		}
 		else
@@ -523,7 +841,7 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 
 			for(y = ymin; y < ymax; y++)
 			for(x = xmin; x < xmax; x++)
-				SetPixel(vertex[0].c, x, y);
+				SetPixel<false>(vertex[0].c, x, y, 0);
 		}
 		break;
 	}

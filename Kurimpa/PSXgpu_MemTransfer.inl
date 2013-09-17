@@ -46,9 +46,7 @@ void PSXgpu::Transfer_VRAM_VRAM(u32 data)
 
 					if(!doMaskCheck(dx, dy))
 					{
-						VRAM.HALF2[dy][dx] = VRAM.HALF2[sy][sx];
-						if(GPUSTAT.MASKSET)
-						VRAM.HALF2[dy][dx] |= 0x8000;
+						VRAM.HALF2[dy][dx] = VRAM.HALF2[sy][sx] | GPUSTAT.MASK;
 					}
 				}
 			}
@@ -96,9 +94,7 @@ void PSXgpu::Transfer_CPU_VRAM(u32 data)
 
 				if(!doMaskCheck(dx, dy))
 				{
-					VRAM.HALF2[dy][dx] = data0.U16[twice];
-					if(GPUSTAT.MASKSET)
-					VRAM.HALF2[dy][dx] |= 0x8000;
+					VRAM.HALF2[dy][dx] = data0.U16[twice] | GPUSTAT.MASK;
 				}
 			}
 

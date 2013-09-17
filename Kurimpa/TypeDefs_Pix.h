@@ -58,11 +58,11 @@ struct vectk
 	u16 tex; // Texture page/clut
 
 	// Set vertex data
-	void SetV(u32 data)
+	void SetV(u32 data, s16 offx, s16 offy)
 	{
 		VDATA z(data);
-		x = z.x;
-		y = z.y;
+		x = z.x + offx;
+		y = z.y + offy;
 	}
 
 	// Set texture data

@@ -406,6 +406,7 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 		case 0xE6:
 			GPUSTAT.MASKSET   =  data&1;
 			GPUSTAT.MASKCHECK = (data>>1)&1;
+			GPUSTAT.MASK = GPUSTAT.MASKSET ? 0x8000 : 0x00;
 			break;
 
 		//case 0xE7: break;
@@ -523,7 +524,7 @@ int PSXgpu::DmaChain(u32 *base32, u32 addr)
 		u32 *currword = &base32[addr >> 2]; // Do out of bounds check?
 
 		if((currword[0] == prevword[0]) || (currword[0] == prevword[1])) break;
-		prevword[counter%2] = currword[0];
+		prevword[counter&1] = currword[0];
 
 		//printf("DmaChain: (%08X|%08X) 0[%08X]\n", currword, addr, currword[0]);
 		

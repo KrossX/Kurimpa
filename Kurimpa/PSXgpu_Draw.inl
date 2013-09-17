@@ -34,9 +34,9 @@ void PSXgpu::DrawPoly3(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY3;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
-	case 2: vertex[1].SetV(data); break;
-	case 3: vertex[2].SetV(data);
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
+	case 2: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
+	case 3: vertex[2].SetV(data, DA.OFFx, DA.OFFy);
 
 		raster->UpdateDC(DC);
 		raster->RasterPoly3(RENDER_FLAT);
@@ -54,18 +54,18 @@ void PSXgpu::DrawPoly3T(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY3T;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[0].SetT(data);
 		TW.SetCLUT(VRAM.HALF2, vertex[0].tex);
 		break;
 
-	case 3: vertex[1].SetV(data); break;
+	case 3: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 4: vertex[1].SetT(data);
 		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
-	case 5: vertex[2].SetV(data); break;
+	case 5: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 6: vertex[2].SetT(data);
 
 		raster->UpdateDC(DC);
@@ -84,11 +84,11 @@ void PSXgpu::DrawPoly3S(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY3S;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[1].c = data; break;
-	case 3: vertex[1].SetV(data); break;
+	case 3: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 4: vertex[2].c = data; break;
-	case 5: vertex[2].SetV(data);
+	case 5: vertex[2].SetV(data, DA.OFFx, DA.OFFy);
 
 		raster->UpdateDC(DC);
 		raster->RasterPoly3(RENDER_SHADED);
@@ -106,20 +106,20 @@ void PSXgpu::DrawPoly3ST(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY3ST;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[0].SetT(data);
 		TW.SetCLUT(VRAM.HALF2, vertex[0].tex);
 		break;
 
 	case 3: vertex[1].c = data; break;
-	case 4: vertex[1].SetV(data); break;
+	case 4: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 5: vertex[1].SetT(data);
 		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
 	case 6: vertex[2].c = data; break;
-	case 7: vertex[2].SetV(data); break;
+	case 7: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 8: vertex[2].SetT(data);
 
 		raster->UpdateDC(DC);
@@ -138,10 +138,10 @@ void PSXgpu::DrawPoly4(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY4;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
-	case 2: vertex[1].SetV(data); break;
-	case 3: vertex[2].SetV(data); break;
-	case 4: vertex[3].SetV(data);
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
+	case 2: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
+	case 3: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
+	case 4: vertex[3].SetV(data, DA.OFFx, DA.OFFy);
 
 		raster->UpdateDC(DC);
 		raster->RasterPoly4(RENDER_FLAT);
@@ -159,20 +159,20 @@ void PSXgpu::DrawPoly4T(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY4T;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[0].SetT(data);
 		TW.SetCLUT(VRAM.HALF2, vertex[0].tex);
 		break;
 
-	case 3: vertex[1].SetV(data); break;
+	case 3: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 4: vertex[1].SetT(data);
 		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
-	case 5: vertex[2].SetV(data); break;
+	case 5: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 6: vertex[2].SetT(data); break;
-	case 7: vertex[3].SetV(data); break;
+	case 7: vertex[3].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 8: vertex[3].SetT(data);
 
 		raster->UpdateDC(DC);
@@ -191,13 +191,13 @@ void PSXgpu::DrawPoly4S(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY4S;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[1].c = data; break;
-	case 3: vertex[1].SetV(data); break;
+	case 3: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 4: vertex[2].c = data; break;
-	case 5: vertex[2].SetV(data); break;
+	case 5: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 6: vertex[3].c = data; break;
-	case 7: vertex[3].SetV(data);
+	case 7: vertex[3].SetV(data, DA.OFFx, DA.OFFy);
 
 		raster->UpdateDC(DC);
 		raster->RasterPoly4(RENDER_SHADED);
@@ -215,23 +215,23 @@ void PSXgpu::DrawPoly4ST(u32 data)
 		GPUMODE = GPUMODE_DRAW_POLY4ST;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[0].SetT(data);
 		TW.SetCLUT(VRAM.HALF2, vertex[0].tex);
 		break;
 
 	case 3: vertex[1].c = data; break;
-	case 4: vertex[1].SetV(data); break;
+	case 4: vertex[1].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 5: vertex[1].SetT(data);
 		GPUSTAT.SetTEXPAGE(vertex[1].tex);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
 	case 6: vertex[2].c = data; break;
-	case 7: vertex[2].SetV(data); break;
+	case 7: vertex[2].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 8: vertex[2].SetT(data); break;
 	case 9: vertex[3].c = data; break;
-	case 10:vertex[3].SetV(data); break;
+	case 10:vertex[3].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 11:vertex[3].SetT(data);
 
 		raster->UpdateDC(DC);
@@ -250,11 +250,11 @@ void PSXgpu::DrawLine(u32 data)
 		GPUMODE = GPUMODE_DRAW_LINE;
 		break;
 
-	case 1: vertex[0].SetV(data);
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		break;
 
 	case 2:
-		vertex[1].SetV(data);
+		vertex[1].SetV(data, DA.OFFx, DA.OFFy);
 
 		raster->UpdateDC(DC);
 		raster->RasterLine(RENDER_FLAT);
@@ -272,19 +272,19 @@ void PSXgpu::DrawLineS(u32 data)
 		GPUMODE = GPUMODE_DRAW_LINES;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: 
-		vertex[1].SetV(data);
+		vertex[1].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterLine(RENDER_FLAT);
 		break;
 
 	default:
-		if(data & 0x50005000) SetReady();
+		if(data == 0x55555555 || data == 0x50005000) SetReady();
 		else
 		{
-			u8 vx = 1 - (gpcount % 2);
-			vertex[vx].SetV(data);
+			u8 vx = 1 - (gpcount & 1);
+			vertex[vx].SetV(data, DA.OFFx, DA.OFFy);
 			raster->RasterLine(RENDER_FLAT);
 		}
 		break;
@@ -300,10 +300,10 @@ void PSXgpu::DrawLineG(u32 data)
 		GPUMODE = GPUMODE_DRAW_LINEG;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[1].c = data; break;
 	case 3:
-		vertex[1].SetV(data);
+		vertex[1].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterLine(RENDER_SHADED);
 		SetReady();
@@ -313,32 +313,29 @@ void PSXgpu::DrawLineG(u32 data)
 
 void PSXgpu::DrawLineGS(u32 data)
 {
-	static u32 line = 0;
-
 	switch(gpcount)
 	{
 	case 0:
 		DrawStart(data);
 		GPUMODE = GPUMODE_DRAW_LINEGS;
-		line = 0;
 		break;
 
-	case 1: vertex[0].SetV(data); break;
+	case 1: vertex[0].SetV(data, DA.OFFx, DA.OFFy); break;
 	case 2: vertex[1].c = data; break;
 
 	case 3:
-		vertex[1].SetV(data);
+		vertex[1].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterLine(RENDER_SHADED);
 		break;
 
 	default:
-		if(data & 0x50005000) SetReady();
+		if(data == 0x55555555 || data == 0x50005000) SetReady();
 		else
 		{
-			if(line % 2)
+			if(gpcount & 1)
 			{
-				vertex[2].SetV(data);
+				vertex[2].SetV(data, DA.OFFx, DA.OFFy);
 
 				vertex[0] = vertex[1];
 				vertex[1] = vertex[2];
@@ -349,8 +346,6 @@ void PSXgpu::DrawLineGS(u32 data)
 			{
 				vertex[2].c = data;
 			}
-
-			line++;
 		}
 		break;
 	}
@@ -366,11 +361,11 @@ void PSXgpu::DrawRect0(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		break;
 
 	case 2:
-		vertex[1].SetV(data); // Size
+		vertex[1].SetV(data, 0, 0); // Size
 		raster->UpdateDC(DC);
 		raster->RasterRect(RENDER_FLAT, 0);
 		SetReady();
@@ -388,7 +383,7 @@ void PSXgpu::DrawRect0T(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -398,7 +393,7 @@ void PSXgpu::DrawRect0T(u32 data)
 		break;
 
 	case 3:
-		vertex[1].SetV(data); // Size
+		vertex[1].SetV(data, 0, 0); // Size
 		raster->UpdateDC(DC);
 		raster->RasterRect(RENDER_TEXTURED, 0);
 		SetReady();
@@ -416,7 +411,7 @@ void PSXgpu::DrawRect1(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterRect(RENDER_FLAT, 1);
 		SetReady();
@@ -434,7 +429,7 @@ void PSXgpu::DrawRect1T(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -458,7 +453,7 @@ void PSXgpu::DrawRect8(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterRect(RENDER_FLAT, 2);
 		SetReady();
@@ -476,7 +471,7 @@ void PSXgpu::DrawRect8T(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 
@@ -500,7 +495,7 @@ void PSXgpu::DrawRect16(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		raster->UpdateDC(DC);
 		raster->RasterRect(RENDER_FLAT, 3);
 		SetReady();
@@ -518,7 +513,7 @@ void PSXgpu::DrawRect16T(u32 data)
 		break;
 
 	case 1:
-		vertex[0].SetV(data);
+		vertex[0].SetV(data, DA.OFFx, DA.OFFy);
 		TW.SetPAGE(VRAM.HALF2, GPUSTAT);
 		break;
 

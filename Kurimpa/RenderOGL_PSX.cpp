@@ -170,7 +170,7 @@ void RenderOGL_PSX::ToggleFiltering()
 void RenderOGL_PSX::ToggleVsync()
 {
 	usevsync = !usevsync;
-	wglSwapIntervalEXT(usevsync ? 1 : 0);
+	wglSwapIntervalEXT(usevsync ? -1 : 0);
 }
 
 //---------------------------------------------------------------[DISPLAY]

@@ -52,6 +52,8 @@ struct SGPUSTAT
 	u8 DMADIR;       // 29-2bits (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)
 	u8 DRAWLINE;     // 31 (0=Even or Vblank, 1=Odd)
 
+	u16 MASK; // Mask helper;
+
 	u32 GetU32();
 	void SetU32(u32 reg);
 	void SetTEXPAGE(u16 PAGE);
@@ -104,10 +106,10 @@ struct DRAWAREA
 
 	void PolyAreaClip(s16 &minX, s16 &maxX, s16 &minY, s16 &maxY)
 	{
-		minX = max(minX, L - OFFx);
-		maxX = min(maxX, R - OFFx);
-		minY = max(minY, T - OFFy);
-		maxY = min(maxY, B - OFFy);
+		minX = max(minX, L);
+		maxX = min(maxX, R);
+		minY = max(minY, T);
+		maxY = min(maxY, B);
 	}
 };
 
@@ -127,7 +129,7 @@ struct TRANSFER
 
 	u32 GetSize()
 	{
-		return (total + total%2) / 2  + 2;
+		return (total + (total&1)) / 2  + 2;
 	}
 };
 
