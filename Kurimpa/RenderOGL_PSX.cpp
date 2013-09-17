@@ -50,6 +50,8 @@ RenderOGL_PSX::RenderOGL_PSX()
 
 //---------------------------------------------------------------[WINDOWSTUFF]
 
+extern bool texturedither;
+
 void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
 	static bool kbuff[256];
@@ -66,6 +68,7 @@ void RenderOGL_PSX::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 		case VK_ADD: ToggleVsync(); break;
 		case VK_SUBTRACT: ToggleVRAM(); break;
 		case VK_RETURN: if(kbuff[VK_MENU]) ToggleFullscreen(); break;
+		case VK_DIVIDE: texturedither = !texturedither; break;
 		}
 		break;
 

@@ -29,6 +29,7 @@ s8 DitherMatrix[4][4] =
 	{+3, -1, +2, -2}
 };
 
+
 static inline u32 ModulateTex(u32 color, u16 texel)
 {
 	RGBA5551 t(texel);
@@ -244,11 +245,31 @@ u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
 	return 0;
 }
 
-u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t)
+float TexDitherU[2][2] =
+{
+	{0.25f, 0.50f},
+	{0.75f, 0.00f}
+};
+
+float TexDitherV[2][2] =
+{
+	{0.00f, 0.75f},
+	{0.50f, 0.25f}
+};
+
+bool texturedither = false;
+
+u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t, s16 x, s16 y)
 {
 	float st = 1.0f - s - t;
-	float U = v[0].u * st + v[1].u * s + v[2].u * t + 0.5f;
-	float V = v[0].v * st + v[1].v * s + v[2].v * t + 0.5f;
+	float U = v[0].u * st + v[1].u * s + v[2].u * t + 0.1f;
+	float V = v[0].v * st + v[1].v * s + v[2].v * t + 0.1f;
+
+	if(texturedither)
+	{
+		U += TexDitherU[y&1][x&1];
+		V += TexDitherV[y&1][x&1];
+	}
 	
 	return GetTexel((u8)U, (u8)V);
 }
@@ -432,7 +453,7 @@ void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 					s = x * CSY - y * CSX + CS;
 					t = x * CTY - y * CTX + CT;
 
-				   texel = GetTexel3(vertex, s, t);
+				   texel = GetTexel3(vertex, s, t, x, y);
 
 					if(texel)
 						SetPixel<true>(vertex[0].c, x, y, texel);
@@ -491,7 +512,7 @@ void RasterPSXSW::RasterPoly3(RENDERTYPE render_mode)
 					s = x * CSY - y * CSX + CS;
 					t = x * CTY - y * CTX + CT;
 
-					texel = GetTexel3(vertex, s, t);
+					texel = GetTexel3(vertex, s, t, x, y);
 				
 					if(texel)
 						SetPixel<true>(GetColorBlend3(vertex, s, t), x, y, texel);
