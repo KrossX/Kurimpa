@@ -87,30 +87,6 @@ static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
 	return GetPix16(pin.RAW);
 }
 
-static inline VEC3 GetColorDiff(u32 c1, u32 c2, int len)
-{
-	if(!len) return VEC3();
-
-	VEC3 out;
-	RGBA8 C1(c1), C2(c2);
-
-	out.R = (C2.R - C1.R) / (float)len;
-	out.G = (C2.G - C1.G) / (float)len;
-	out.B = (C2.B - C1.B) / (float)len;
-
-	return out;
-}
-
-static inline u32 GetColorGrad(u32 c0, VEC3 diff, int i)
-{
-	RGBA8 C0(c0);
-
-	C0.R += (u8)(diff.R * i);
-	C0.G += (u8)(diff.G * i);
-	C0.B += (u8)(diff.B * i);
-
-	return C0.RAW;
-}
 
 static inline u32 GetColorBlend3(vectk *v, float s, float t)
 {
@@ -210,7 +186,7 @@ inline void RasterPSXSW::SetPixel(u32 color, s16 x, s16 y, u16 texel)
 			frontcolor = Blend(backcolor, frontcolor);
 	}
 
-	backcolor = frontcolor | GPUSTAT->MASK | texmask;
+	backcolor = frontcolor | GPUSTAT->MASK16 | texmask;
 }
 
 u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
@@ -276,18 +252,16 @@ u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t, s16 x, s16 y)
 
 void RasterPSXSW::RasterLine(RENDERTYPE render_mode)
 {
-	//  THE EXTREMELY FAST LINE ALGORITHM (B)
+	// THE EXTREMELY FAST LINE ALGORITHM Variation D (Addition Fixed Point)
 	// http://www.edepot.com/algorithm.html
 
 	bool yLonger=false;
 	int incrementVal;
+
 	int shortLen = vertex[1].y - vertex[0].y;
 	int longLen = vertex[1].x - vertex[0].x;
 
 	if(longLen > 1023 || shortLen > 511) return;
-
-	if(!shortLen) shortLen = 1;
-	if(!longLen) longLen = 1;
 
 	if (abs(shortLen)>abs(longLen))
 	{
@@ -297,31 +271,61 @@ void RasterPSXSW::RasterLine(RENDERTYPE render_mode)
 		yLonger=true;
 	}
 
-	incrementVal = longLen < 0 ? -1 : 1;
-	float multDiff = (!longLen)? (float)shortLen : (float)shortLen/(float)longLen;
+	incrementVal = 1;
+	const int endVal = longLen;
+
+	if(longLen < 0)
+	{
+		incrementVal = -1;
+		longLen = -longLen;
+	}
+
+	const int decInc = (!longLen)? 0 : (shortLen << 16) / longLen;
 
 	if(render_mode == RENDER_SHADED)
 	{
-		VEC3 cdiff = GetColorDiff(vertex[0].c, vertex[1].c, longLen);
+		RGBA8 c0(vertex[0].c), c1(vertex[1].c);
 
-		if (yLonger) for (int i=0; i!=longLen; i+=incrementVal)
+		const u16 cdr = (!longLen)? 0 : ((c1.R - c0.R) << 8) / longLen;
+		const u16 cdg = (!longLen)? 0 : ((c1.G - c0.G) << 8) / longLen;
+		const u16 cdb = (!longLen)? 0 : ((c1.B - c0.B) << 8) / longLen;
+
+		u16 cr = 0, cg = 0, cb = 0;
+
+		if (yLonger) for (int i=0, j=0; i!=endVal; i+=incrementVal, j+=decInc)
 		{
-			SetPixel<false>(GetColorGrad(vertex[0].c, cdiff, i), vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i, 0);
+			c1.R = c0.R + (cr >> 8);
+			c1.G = c0.G + (cg >> 8);
+			c1.B = c0.B + (cb >> 8);
+
+			SetPixel<false>(c1.RAW, vertex[0].x+(j>>16), vertex[0].y+i, 0);
+
+			cr += cdr;
+			cg += cdg;
+			cb += cdb;
 		}
-		else for (int i=0; i!=longLen; i+=incrementVal)
+		else for (int i=0, j=0; i!=endVal; i+=incrementVal, j+=decInc)
 		{
-			SetPixel<false>(GetColorGrad(vertex[0].c, cdiff, i),  vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff), 0);
+			c1.R = c0.R + (cr >> 8);
+			c1.G = c0.G + (cg >> 8);
+			c1.B = c0.B + (cb >> 8);
+
+			SetPixel<false>(c1.RAW,  vertex[0].x+i, vertex[0].y+(j>>16), 0);
+
+			cr += cdr;
+			cg += cdg;
+			cb += cdb;
 		}
 	}
 	else
 	{
-		if (yLonger) for (int i=0; i!=longLen; i+=incrementVal)
+		if (yLonger) for (int i=0, j=0; i!=endVal; i+=incrementVal, j+=decInc)
 		{
-			SetPixel<false>(vertex[0].c, vertex[0].x+(int)((float)i*multDiff), vertex[0].y+i, 0);
+			SetPixel<false>(vertex[0].c, vertex[0].x+(j>>16), vertex[0].y+i, 0);
 		}
-		else for (int i=0; i!=longLen; i+=incrementVal)
+		else for (int i=0, j=0; i!=endVal; i+=incrementVal, j+=decInc)
 		{
-			SetPixel<false>(vertex[0].c, vertex[0].x+i, vertex[0].y+(int)((float)i*multDiff), 0);
+			SetPixel<false>(vertex[0].c, vertex[0].x+i, vertex[0].y+(j>>16), 0);
 		}
 	}
 }

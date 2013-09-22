@@ -41,14 +41,6 @@ union VDATA
 	VDATA(u32 data) : RAW(data) {};
 };
 
-struct VEC3
-{
-	float R, G, B, A;
-
-	VEC3(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 0.0f) :
-		R(r), G(g), B(b), A(a) {};
-};
-
 struct vectk
 {
 	s16 x, y;
