@@ -52,7 +52,8 @@ struct SGPUSTAT
 	u8 DMADIR;       // 29-2bits (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)
 	u8 DRAWLINE;     // 31 (0=Even or Vblank, 1=Odd)
 
-	u16 MASK; // Mask helper;
+	u16 MASK16; // Mask helper
+	u32 MASK32; // Mask helper
 
 	u32 GetU32();
 	void SetU32(u32 reg);

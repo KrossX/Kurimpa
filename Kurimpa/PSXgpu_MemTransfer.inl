@@ -44,9 +44,11 @@ void PSXgpu::Transfer_VRAM_VRAM(u32 data)
 					sx = (TR.src.U16[0] + x) & 0x3FF;
 					dx = (TR.dst.U16[0] + x) & 0x3FF;
 
-					if(!doMaskCheck(dx, dy))
+					u16 &dest = VRAM.HALF2[dy][dx];
+
+					if(!doMaskCheck(dest))
 					{
-						VRAM.HALF2[dy][dx] = VRAM.HALF2[sy][sx] | GPUSTAT.MASK;
+						dest = VRAM.HALF2[sy][sx] | GPUSTAT.MASK16;
 					}
 				}
 			}
@@ -82,7 +84,7 @@ void PSXgpu::Transfer_CPU_VRAM(u32 data)
 	
 	default:
 		{
-			Word data0; data0.U32 = data;
+			Word data0; data0.U32 = data | GPUSTAT.MASK32;
 
 			for(u8 twice = 0; twice < 2; twice++, x++)
 			{
@@ -92,10 +94,10 @@ void PSXgpu::Transfer_CPU_VRAM(u32 data)
 				u16 dx = (TR.dst.U16[0] + x) & 0x3FF;
 				u16 dy = (TR.dst.U16[1] + y) & 0x1FF;
 
-				if(!doMaskCheck(dx, dy))
-				{
-					VRAM.HALF2[dy][dx] = data0.U16[twice] | GPUSTAT.MASK;
-				}
+				u16 &pix = VRAM.HALF2[dy][dx];
+
+				if(!doMaskCheck(pix))
+					pix = data0.U16[twice];
 			}
 
 			if(gpcount >= gpsize) SetReady();
@@ -142,6 +144,7 @@ void PSXgpu::Transfer_VRAM_CPU(u32 data)
 			}
 
 			GPUREAD = TR.dst.U32;
+
 			if(gpcount >= gpsize)
 			{
 				GPUSTAT.READYVRAMCPU = 0;

@@ -406,7 +406,8 @@ void PSXgpu::Command(u32 data) // 0x1F801810 GP0
 		case 0xE6:
 			GPUSTAT.MASKSET   =  data&1;
 			GPUSTAT.MASKCHECK = (data>>1)&1;
-			GPUSTAT.MASK = GPUSTAT.MASKSET ? 0x8000 : 0x00;
+			GPUSTAT.MASK16 = GPUSTAT.MASKSET ? 0x8000 : 0x00;
+			GPUSTAT.MASK32 = GPUSTAT.MASKSET ? 0x80008000 : 0x00;
 			break;
 
 		//case 0xE7: break;
