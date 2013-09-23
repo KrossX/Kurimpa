@@ -65,7 +65,7 @@ struct RasterPSXSW : public RasterPSX
 	inline u16 Blend(u16 &back, u16 &front);
 
 	template<bool textured>
-	inline void SetPixel(u32 color, s16 x, s16 y, u16 texel);
+	void SetPixel(u32 color, s16 x, s16 y, u16 texel);
 
 	inline u16  GetTexel(u8 tx, u8 ty);
 	inline u16  GetTexel3(vectk *v, float s, float t, s16 x, s16 y);

@@ -21,72 +21,13 @@
 #include "RasterPSX.h"
 #include <cmath>
 
-s8 DitherMatrix[4][4] =
+const s8 DitherMatrix[4][4] =
 {
 	{-4,  0, -3, +1},
 	{+2, -2, +3, -1},
 	{-3, +1, -4,  0},
 	{+3, -1, +2, -2}
 };
-
-
-static inline u32 ModulateTex(u32 color, u16 texel)
-{
-	RGBA5551 t(texel);
-	RGBA8 c(color);
-
-	u16 Cr = (c.R * t.R) >> 4;
-	u16 Cg = (c.G * t.G) >> 4;
-	u16 Cb = (c.B * t.B) >> 4;
-
-	c.R = Cr > 0xFF ? 0xFF : Cr;
-	c.G = Cg > 0xFF ? 0xFF : Cg;
-	c.B = Cb > 0xFF ? 0xFF : Cb;
-
-	return c.RAW;
-}
-
-static inline u16 GetPix16(u32 in)
-{
-	RGBA8 pin(in);
-
-	RGBA5551 pix16(0);
-	pix16.R = pin.R >> 3;
-	pix16.G = pin.G >> 3;
-	pix16.B = pin.B >> 3;
-
-	return pix16.RAW;
-}
-
-static inline u32 GetPix24(u16 in)
-{
-	RGBA5551 pin(in);
-
-	RGBA8 pix32(0);
-	pix32.R = (pin.R * 0xFF) / 0x1F;
-	pix32.G = (pin.G * 0xFF) / 0x1F;
-	pix32.B = (pin.B * 0xFF) / 0x1F;
-
-	return pix32.RAW;
-}
-
-static inline u16 GetPix16Dither(u32 in, s16 posx, s16 posy)
-{
-	RGBA8 pin(in);
-
-	s8 offset = DitherMatrix[posy&3][posx&3];
-
-	s16 R = pin.R + offset;
-	s16 G = pin.G + offset;
-	s16 B = pin.B + offset;
-
-	pin.R = R > 0xFF ? 0xFF : R < 0 ? 0 : R;
-	pin.G = G > 0xFF ? 0xFF : G < 0 ? 0 : G;
-	pin.B = B > 0xFF ? 0xFF : B < 0 ? 0 : B;
-
-	return GetPix16(pin.RAW);
-}
-
 
 static inline u32 GetColorBlend3(vectk *v, float s, float t)
 {
@@ -101,92 +42,107 @@ static inline u32 GetColorBlend3(vectk *v, float s, float t)
 	return C0.RAW;
 }
 
-template<s16 max>
-static inline void ClampMax(s16 *col)
-{
-	if(col[0] > max) col[0] = max;
-	if(col[1] > max) col[1] = max;
-	if(col[2] > max) col[2] = max;
-}
-
-template<s16 min>
-static inline void ClampMin(s16 *col)
-{
-	if(col[0] < min) col[0] = min;
-	if(col[1] < min) col[1] = min;
-	if(col[2] < min) col[2] = min;
-}
-
-inline u16 RasterPSXSW::Blend(u16 &back, u16 &front)
-{
-	s16 B[3] = {back & 0x1F, (back >> 5) & 0x1F, (back >> 10) & 0x1F};
-	s16 F[3] = {front & 0x1F, (front >> 5) & 0x1F, (front >> 10) & 0x1F};
-
-
-	switch(GPUSTAT->BLENDEQ)
-	{
-	case 0:
-		F[0] = (B[0] + F[0]) >> 1;
-		F[1] = (B[1] + F[1]) >> 1;
-		F[2] = (B[2] + F[2]) >> 1;
-		break;
-		
-	case 1:
-		F[0] = B[0] + F[0];
-		F[1] = B[1] + F[1];
-		F[2] = B[2] + F[2];
-		ClampMax<0x1F>(F);
-		break;
-		
-	case 2:
-		F[0] = B[0] - F[0];
-		F[1] = B[1] - F[1];
-		F[2] = B[2] - F[2];
-		ClampMin<0x00>(F);
-		break;
-
-	case 3:
-		F[0] = B[0] + (F[0] >> 2);
-		F[1] = B[1] + (F[1] >> 2);
-		F[2] = B[2] + (F[2] >> 2);
-		ClampMax<0x1F>(F);
-		break;
-	}
-
-	u16 out = F[0] | (F[1] << 5) | (F[2] << 10);
-	return out;
-}
-
 template<bool textured>
-inline void RasterPSXSW::SetPixel(u32 color, s16 x, s16 y, u16 texel)
+void RasterPSXSW::SetPixel(u32 color, s16 x, s16 y, u16 texel)
 {
 	if(DA->ScissorTest(x, y)) return;
 
-	u16 frontcolor, &backcolor = VRAM->HALF2[y][x];
+	u16 &backcolor = VRAM->HALF2[y][x];
+
 	if(doMaskCheck(backcolor)) return;
 
-	u16 texmask = texel & 0x8000;
+	const u16 texmask = texel & 0x8000;
+
+	RGBA5551 tex(texel), front(0);
+	RGBA8 col(color);
 	
 	if(textured)
 	{
 		if(Drawing.doModulate)
-			color = ModulateTex(color, texel);
+		{
+			u16 Cr = (col.R * tex.R) >> 4;
+			u16 Cg = (col.G * tex.G) >> 4;
+			u16 Cb = (col.B * tex.B) >> 4;
+
+			col.R = Cr > 0xFF ? 0xFF : Cr;
+			col.G = Cg > 0xFF ? 0xFF : Cg;
+			col.B = Cb > 0xFF ? 0xFF : Cb;
+		}
 		else 
-			color = GetPix24(texel);
+		{
+			col.R = (tex.R * 0xFF) / 0x1F;
+			col.G = (tex.G * 0xFF) / 0x1F;
+			col.B = (tex.B * 0xFF) / 0x1F;
+		}
 	}
 
 	if(Drawing.doDither)
-		frontcolor = GetPix16Dither(color, x, y);
-	else
-		frontcolor = GetPix16(color);
+	{
+		s8 offset = DitherMatrix[y&3][x&3];
+
+		s16 R = col.R + offset;
+		s16 G = col.G + offset;
+		s16 B = col.B + offset;
+
+		col.R = R > 0xFF ? 0xFF : R < 0 ? 0 : R;
+		col.G = G > 0xFF ? 0xFF : G < 0 ? 0 : G;
+		col.B = B > 0xFF ? 0xFF : B < 0 ? 0 : B;
+	}
+
+	front.R = col.R >> 3;
+	front.G = col.G >> 3;
+	front.B = col.B >> 3;
 	
 	if(Drawing.isBlendEnabled)
 	{
-		if(!textured || (textured && texmask > 0))
-			frontcolor = Blend(backcolor, frontcolor);
+		if(!textured || (texmask > 0))
+		{
+			RGBA5551 back(backcolor);
+
+			s8 R, G, B;
+
+			switch(GPUSTAT->BLENDEQ)
+			{
+			case 0:
+				front.R = (back.R + front.R) >> 1;
+				front.G = (back.G + front.G) >> 1;
+				front.B = (back.B + front.B) >> 1;
+				break;
+		
+			case 1:
+				R = back.R + front.R;
+				G = back.G + front.G;
+				B = back.B + front.B;
+
+				front.R = R > 0x1F ? 0x1F : R;
+				front.G = G > 0x1F ? 0x1F : G;
+				front.B = B > 0x1F ? 0x1F : B;
+				break;
+		
+			case 2:
+				R = back.R - front.R;
+				G = back.G - front.G;
+				B = back.B - front.B;
+
+				front.R = R < 0 ? 0 : R;
+				front.G = G < 0 ? 0 : G;
+				front.B = B < 0 ? 0 : B;
+				break;
+
+			case 3:
+				R = back.R + (front.R >> 2);
+				G = back.G + (front.G >> 2);
+				B = back.B + (front.B >> 2);
+
+				front.R = R > 0x1F ? 0x1F : R;
+				front.G = G > 0x1F ? 0x1F : G;
+				front.B = B > 0x1F ? 0x1F : B;
+				break;
+			}
+		}
 	}
 
-	backcolor = frontcolor | GPUSTAT->MASK16 | texmask;
+	backcolor = front.RAW | GPUSTAT->MASK16 | texmask;
 }
 
 u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
@@ -221,31 +177,11 @@ u16 RasterPSXSW::GetTexel(u8 tx, u8 ty)
 	return 0;
 }
 
-float TexDitherU[2][2] =
-{
-	{0.25f, 0.50f},
-	{0.75f, 0.00f}
-};
-
-float TexDitherV[2][2] =
-{
-	{0.00f, 0.75f},
-	{0.50f, 0.25f}
-};
-
-bool texturedither = false;
-
 u16 RasterPSXSW::GetTexel3(vectk *v, float s, float t, s16 x, s16 y)
 {
 	float st = 1.0f - s - t;
-	float U = v[0].u * st + v[1].u * s + v[2].u * t + 0.1f;
-	float V = v[0].v * st + v[1].v * s + v[2].v * t + 0.1f;
-
-	if(texturedither)
-	{
-		U += TexDitherU[y&1][x&1];
-		V += TexDitherV[y&1][x&1];
-	}
+	float U = v[0].u * st + v[1].u * s + v[2].u * t + 0.5f;
+	float V = v[0].v * st + v[1].v * s + v[2].v * t + 0.5f;
 	
 	return GetTexel((u8)U, (u8)V);
 }
@@ -875,7 +811,14 @@ void RasterPSXSW::RasterRect(RENDERTYPE render_mode, u8 type)
 
 void RasterPSXSW::DrawFill()
 {
-	u16 color16 = GetPix16(vertex[0].c);
+	RGBA8 pin(vertex[0].c);
+
+	RGBA5551 pix16(0);
+	pix16.R = pin.R >> 3;
+	pix16.G = pin.G >> 3;
+	pix16.B = pin.B >> 3;
+
+	const u16 color16 = pix16.RAW;
 
 	const u16 xmax =  TR->start.U16[0] + TR->size.U16[0];
 	const u16 ymax =  TR->start.U16[1] + TR->size.U16[1];
